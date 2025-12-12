@@ -9,6 +9,7 @@ use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Facades\FilamentIcon;
 use Illuminate\Filesystem\Filesystem;
 use Livewire\Features\SupportTesting\Testable;
+use Nwidart\Modules\Facades\Module as ModuleFacade;
 use Nwidart\Modules\Module;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
@@ -83,6 +84,9 @@ class ModulesServiceProvider extends PackageServiceProvider
             $className = str($namespace)->afterLast('\\')->toString();
             if (str($className)->startsWith($module)) {
                 // register the module service provider
+                if (! class_exists($namespace)) {
+                    continue;
+                }
                 $this->app->register($namespace);
             }
         }
@@ -90,24 +94,28 @@ class ModulesServiceProvider extends PackageServiceProvider
 
     public function autoDiscoverPanels(): void
     {
-        $this->app->beforeResolving('filament', function () {
-            $modules = \Module::allEnabled();
-            $cacheKey = 'filament-modules-panel-providers';
-            $ttl = 10;  // 24 hours
-            $modules = \Module::allEnabled();
-            $panels = collect($modules)->flatMap(function (Module $module) {
-                $panelProviders = glob($module->getExtraPath('app/Providers/Filament') . '/*.php');
+        if (! config('filament-modules.auto_register_panels', true)) {
+            return;
+        }
 
-                return collect($panelProviders)->map(function ($path) {
-                    return $this->app[Modules::class]->convertPathToNamespace($path);
-                })->toArray();
-            })->toArray();
+        $registerPanels = function () {
+            $panels = $this->discoverPanelProviders();
+
             foreach ($panels as $panel) {
-                if (class_exists($panel)) {
+                if (
+                    class_exists($panel)
+                    && (! property_exists($panel, 'autoRegister') || (bool) ($panel::$autoRegister ?? true))
+                ) {
                     $this->app->register($panel);
                 }
             }
-        });
+        };
+
+        $registerPanels();
+
+        // Ensure panels are picked up whether or not Filament is already resolved.
+        $this->app->beforeResolving('filament', $registerPanels);
+        $this->app->afterResolving('filament', $registerPanels);
     }
 
     public function packageBooted(): void
@@ -129,9 +137,11 @@ class ModulesServiceProvider extends PackageServiceProvider
 
         // Handle Stubs
         if (app()->runningInConsole()) {
-            foreach (app(Filesystem::class)->files(__DIR__ . '/../stubs/') as $file) {
+            $stubsPath = __DIR__ . '/../stubs/';
+            foreach (app(Filesystem::class)->allFiles($stubsPath) as $file) {
+                $relativePath = str($file->getPathname())->after($stubsPath)->toString();
                 $this->publishes([
-                    $file->getRealPath() => base_path("stubs/modules/{$file->getFilename()}"),
+                    $file->getRealPath() => base_path("stubs/modules/{$relativePath}"),
                 ], 'modules-stubs');
             }
         }
@@ -266,5 +276,44 @@ class ModulesServiceProvider extends PackageServiceProvider
 
             return str($appPath . ($relativePath ? DIRECTORY_SEPARATOR . $relativePath : ''))->replace(DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR, DIRECTORY_SEPARATOR)->toString();
         });
+    }
+
+    /**
+     * @return array<string>
+     */
+    protected function discoverPanelProviders(): array
+    {
+        $modulesPath = config('modules.paths.modules', 'Modules');
+        $glob = rtrim($modulesPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Providers' . DIRECTORY_SEPARATOR . 'Filament' . DIRECTORY_SEPARATOR . '*PanelProvider.php';
+        $panelProviders = glob($glob) ?: [];
+
+        // #region agent log
+        try {
+            $logPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
+            app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
+            $payload = json_encode([
+                'sessionId' => 'debug-session',
+                'runId' => env('FM_DEBUG_RUN', 'run3'),
+                'hypothesisId' => 'H4',
+                'location' => 'ModulesServiceProvider::discoverPanelProviders',
+                'message' => 'panel provider discovery',
+                'data' => [
+                    'glob' => $glob,
+                    'count' => count($panelProviders),
+                    'providers' => array_values($panelProviders),
+                ],
+                'timestamp' => round(microtime(true) * 1000),
+            ]);
+            file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
+        } catch (\Throwable $e) {
+            // swallow
+        }
+        // #endregion agent log
+
+        return collect($panelProviders)
+            ->map(fn ($path) => $this->app[Modules::class]->convertPathToNamespace($path))
+            ->unique()
+            ->values()
+            ->toArray();
     }
 }

@@ -3,9 +3,11 @@
 namespace Coolsam\Modules\Commands;
 
 use Coolsam\Modules\Enums\ConfigMode;
+use Coolsam\Modules\Facades\FilamentModules;
 use Filament\Support\Commands\Concerns\CanManipulateFiles;
 use Illuminate\Console\Command;
 use Illuminate\Console\Concerns\PromptsForMissingInput;
+use Illuminate\Filesystem\Filesystem;
 use Nwidart\Modules\Exceptions\ModuleNotFoundException;
 use Nwidart\Modules\Facades\Module;
 use Symfony\Component\Console\Input\InputArgument;
@@ -38,6 +40,8 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
 
     private string $moduleName;
 
+    private string $frontendPreset = 'tailwind';
+
     /**
      * Execute the console command.
      */
@@ -45,18 +49,44 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
     {
         $this->moduleName = $this->argument('module');
         $this->mode = ConfigMode::tryFrom(\Config::get('filament-modules.mode', ConfigMode::BOTH->value));
+        $interactive = $this->input->isInteractive() && ! app()->runningUnitTests();
+        $this->cluster = $this->option('cluster')
+            ? true
+            : ($interactive ? confirm('Do you want to organize your code into filament clusters?', true) : false);
+        $this->frontendPreset = $this->option('sass') ? 'sass' : 'tailwind';
 
-        if (! $this->option('cluster')) {
-            $this->cluster = confirm('Do you want to organize your code into filament clusters?', true);
+        // #region agent log
+        try {
+            $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
+            app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
+            $payload = json_encode([
+                'sessionId' => 'debug-session',
+                'runId' => 'run3',
+                'hypothesisId' => 'H3',
+                'location' => 'ModuleFilamentInstallCommand::handle',
+                'message' => 'handle start',
+                'data' => [
+                    'module' => $this->moduleName,
+                    'frontendPreset' => $this->frontendPreset,
+                    'modulesPath' => config('modules.paths.modules'),
+                ],
+                'timestamp' => round(microtime(true) * 1000),
+            ]);
+            file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
+        } catch (\Throwable $e) {
         }
+        // #endregion agent log
+
         // Ensure the Filament directories exist
         $this->ensureFilamentDirectoriesExist();
+        $this->ensureFrontendScaffolding();
 
         if ($this->mode->shouldRegisterPlugins()) {
             // Create Filament Plugin
             $this->createDefaultFilamentPlugin();
         }
-        if ($this->cluster && confirm('Would you like to create a default Cluster for the module?', true)) {
+        $shouldCreateDefaultCluster = $this->cluster && ($interactive ? confirm('Would you like to create a default Cluster for the module?', true) : false);
+        if ($shouldCreateDefaultCluster) {
             $this->createDefaultFilamentCluster();
         }
 
@@ -74,6 +104,7 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
     {
         return [
             ['cluster', 'C', InputOption::VALUE_NONE],
+            ['sass', null, InputOption::VALUE_NONE],
         ];
     }
 
@@ -131,6 +162,106 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
                 $this->makeDirectory($dir);
             }
         }
+    }
+
+    private function ensureFrontendScaffolding(): void
+    {
+        $module = $this->getModule();
+        $filesystem = app(Filesystem::class);
+
+        $stubBase = FilamentModules::packagePath('stubs/module/' . $this->frontendPreset);
+        // #region agent log
+        try {
+            $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
+            app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
+            $payload = json_encode([
+                'sessionId' => 'debug-session',
+                'runId' => 'run3',
+                'hypothesisId' => 'H3',
+                'location' => 'ModuleFilamentInstallCommand::ensureFrontendScaffolding',
+                'message' => 'stub base check',
+                'data' => [
+                    'stubBase' => $stubBase,
+                    'exists' => is_dir($stubBase),
+                    'modulePath' => $module->getPath(),
+                    'preset' => $this->frontendPreset,
+                ],
+                'timestamp' => round(microtime(true) * 1000),
+            ]);
+            file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
+        } catch (\Throwable $e) {
+        }
+        // #endregion agent log
+
+        if (! is_dir($stubBase)) {
+            return;
+        }
+
+        $stubs = [
+            $stubBase . DIRECTORY_SEPARATOR . 'package.json' => $module->getPath() . DIRECTORY_SEPARATOR . 'package.json',
+            $stubBase . DIRECTORY_SEPARATOR . 'vite.config.js' => $module->getExtraPath('vite.config.js'),
+        ];
+
+        if ($this->frontendPreset === 'tailwind') {
+            $stubs[$stubBase . DIRECTORY_SEPARATOR . 'tailwind.config.js'] = $module->getExtraPath('tailwind.config.js');
+            $stubs[$stubBase . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'app.css'] = $module->resourcesPath('css/app.css');
+        } else {
+            $stubs[$stubBase . DIRECTORY_SEPARATOR . 'resources' . DIRECTORY_SEPARATOR . 'css' . DIRECTORY_SEPARATOR . 'app.scss'] = $module->resourcesPath('css/app.scss');
+        }
+
+        foreach ($stubs as $from => $to) {
+            if (! file_exists($from)) {
+                continue;
+            }
+
+            $filesystem->ensureDirectoryExists(pathinfo($to, PATHINFO_DIRNAME));
+            $filesystem->copy($from, $to);
+            $this->info("Scaffolded: {$to}");
+
+            // #region agent log
+            try {
+                $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
+                app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
+                $payload = json_encode([
+                    'sessionId' => 'debug-session',
+                    'runId' => 'run3',
+                    'hypothesisId' => 'H3',
+                    'location' => 'ModuleFilamentInstallCommand::ensureFrontendScaffolding',
+                    'message' => 'scaffold copy',
+                    'data' => [
+                        'from' => $from,
+                        'to' => $to,
+                        'exists_after' => file_exists($to),
+                        'preset' => $this->frontendPreset,
+                    ],
+                    'timestamp' => round(microtime(true) * 1000),
+                ]);
+                file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
+            } catch (\Throwable $e) {
+                // swallow
+            }
+            // #endregion agent log
+        }
+
+        // #region agent log
+        try {
+            $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
+            app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
+            $payload = json_encode([
+                'sessionId' => 'debug-session',
+                'runId' => 'run3',
+                'hypothesisId' => 'H3',
+                'location' => 'ModuleFilamentInstallCommand::ensureFrontendScaffolding',
+                'message' => 'scaffold loop end',
+                'data' => [
+                    'total_targets' => count($stubs),
+                ],
+                'timestamp' => round(microtime(true) * 1000),
+            ]);
+            file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
+        } catch (\Throwable $e) {
+        }
+        // #endregion agent log
     }
 
     private function makeDirectory(string $dir): void

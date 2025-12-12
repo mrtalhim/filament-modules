@@ -43,8 +43,14 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "Coolsam\\Modules\\Tests\\": "tests/"
-    }
+      "Coolsam\\Modules\\Tests\\": "tests/",
+      "Modules\\": [
+        "workbench/Modules/"
+      ]
+    },
+    "classmap": [
+      "workbench/Modules"
+    ]
   },
   "scripts": {
     "post-autoload-dump": [

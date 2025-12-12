@@ -9,6 +9,7 @@ use Filament\Support\Commands\Concerns\CanGeneratePanels;
 use Filament\Support\Commands\Concerns\CanManipulateFiles;
 use Filament\Support\Commands\Exceptions\FailureCommandOutput;
 use Illuminate\Support\Str;
+use Nwidart\Modules\Facades\Module;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 
@@ -70,6 +71,12 @@ class ModuleMakeFilamentPanelCommand extends MakePanelCommand
                 mode: InputOption::VALUE_OPTIONAL,
                 description: 'The navigation label for the panel',
             ),
+            new InputOption(
+                name: 'no-auto-register-panel',
+                shortcut: null,
+                mode: InputOption::VALUE_NONE,
+                description: 'Generate the panel provider without auto-registering it via ModulesServiceProvider',
+            ),
         ];
     }
 
@@ -110,7 +117,7 @@ class ModuleMakeFilamentPanelCommand extends MakePanelCommand
     protected function ensureModuleArgument(): void
     {
         if (! $this->argument('module')) {
-            $module = select('Please select the module to create the panel in:', \Module::allEnabled());
+            $module = select('Please select the module to create the panel in:', Module::allEnabled());
             if (! $module) {
                 $this->components->error('No module selected. Aborting panel creation.');
                 exit(1);
@@ -157,6 +164,30 @@ class ModuleMakeFilamentPanelCommand extends MakePanelCommand
                 ->replace('\\', '/')
                 ->append('.php'),
         );
+        app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(pathinfo($path, PATHINFO_DIRNAME));
+
+        // #region agent log
+        try {
+            $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
+            app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
+            $payload = json_encode([
+                'sessionId' => 'debug-session',
+                'runId' => 'run3',
+                'hypothesisId' => 'H4',
+                'location' => 'ModuleMakeFilamentPanelCommand::generatePanel',
+                'message' => 'panel target',
+                'data' => [
+                    'module' => $module->getName(),
+                    'path' => $path,
+                    'fqn' => $module->appNamespace("Providers\\Filament\\{$basename}"),
+                    'id' => $id,
+                ],
+                'timestamp' => round(microtime(true) * 1000),
+            ]);
+            file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
+        } catch (\Throwable $e) {
+        }
+        // #endregion agent log
 
         if (! $isForced && $this->checkForCollision([$path])) {
             throw new FailureCommandOutput;
@@ -169,7 +200,112 @@ class ModuleMakeFilamentPanelCommand extends MakePanelCommand
             'id' => $id,
             'moduleName' => $module->getName(),
             'navigationLabel' => $this->option('label'),
+            'autoRegister' => ! $this->option('no-auto-register-panel'),
         ]));
+
+        // Eagerly register the provider when auto-registration is enabled so tests/users see it immediately.
+        if (config('filament-modules.auto_register_panels', true) && ! $this->option('no-auto-register-panel')) {
+            if (! class_exists($fqn) && file_exists($path)) {
+                require_once $path;
+            }
+
+            if (class_exists($fqn)) {
+                $this->laravel->register($fqn);
+
+                // Also register the Panel instance immediately so Filament can discover it in the same request.
+                try {
+                    $providerInstance = new $fqn($this->laravel);
+                    if (method_exists($providerInstance, 'panel')) {
+                        $panelInstance = $providerInstance->panel(\Filament\Panel::make());
+                        app(\Filament\PanelRegistry::class)->register($panelInstance);
+
+                        // #region agent log
+                        try {
+                            $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
+                            app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
+                            $payload = json_encode([
+                                'sessionId' => 'debug-session',
+                                'runId' => 'run3',
+                                'hypothesisId' => 'H4',
+                                'location' => 'ModuleMakeFilamentPanelCommand::generatePanel',
+                                'message' => 'panel instance registered',
+                                'data' => [
+                                    'ids' => collect(\Filament\Facades\Filament::getPanels())->map(fn ($panel) => $panel->getId())->values()->all(),
+                                    'targetId' => $panelInstance->getId(),
+                                ],
+                                'timestamp' => round(microtime(true) * 1000),
+                            ]);
+                            file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
+                        } catch (\Throwable $e) {
+                        }
+                        // #endregion agent log
+                    }
+                } catch (\Throwable $e) {
+                    // #region agent log
+                    try {
+                        $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
+                        app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
+                        $payload = json_encode([
+                            'sessionId' => 'debug-session',
+                            'runId' => 'run3',
+                            'hypothesisId' => 'H4',
+                            'location' => 'ModuleMakeFilamentPanelCommand::generatePanel',
+                            'message' => 'panel instance registration error',
+                            'data' => [
+                                'fqn' => $fqn,
+                                'error' => $e->getMessage(),
+                            ],
+                            'timestamp' => round(microtime(true) * 1000),
+                        ]);
+                        file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
+                    } catch (\Throwable $inner) {
+                    }
+                    // swallow; discovery will still pick it up later
+                }
+            }
+
+            // #region agent log
+            try {
+                $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
+                app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
+                $payload = json_encode([
+                    'sessionId' => 'debug-session',
+                    'runId' => 'run3',
+                    'hypothesisId' => 'H4',
+                    'location' => 'ModuleMakeFilamentPanelCommand::generatePanel',
+                    'message' => 'panel registered',
+                    'data' => [
+                        'fqn' => $fqn,
+                        'registered' => ! empty(app()->getProviders($fqn)),
+                    ],
+                    'timestamp' => round(microtime(true) * 1000),
+                ]);
+                file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
+            } catch (\Throwable $e) {
+            }
+            // #endregion agent log
+        }
+
+        // #region agent log
+        try {
+            $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
+            app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
+            $payload = json_encode([
+                'sessionId' => 'debug-session',
+                'runId' => 'run3',
+                'hypothesisId' => 'H4',
+                'location' => 'ModuleMakeFilamentPanelCommand::generatePanel',
+                'message' => 'panel written',
+                'data' => [
+                    'path' => $path,
+                    'exists_after' => file_exists($path),
+                ],
+                'timestamp' => round(microtime(true) * 1000),
+            ]);
+            file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
+        } catch (\Throwable $e) {
+        }
+        // #endregion agent log
 
         $this->components->info("Filament panel [{$path}] created successfully.");
     }

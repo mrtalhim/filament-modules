@@ -6,7 +6,6 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Navigation\NavigationItem;
 use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -24,6 +23,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Nette\PhpGenerator\ClassType;
 use Nette\PhpGenerator\Literal;
 use Nette\PhpGenerator\Method;
+use Nwidart\Modules\Facades\Module as ModuleFacade;
 
 class ModulePanelProviderClassGenerator extends ClassGenerator
 {
@@ -35,8 +35,9 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
         protected string $moduleName,
         protected string $navigationLabel,
         protected bool $isDefault = false,
+        protected bool $autoRegister = true,
     ) {
-        $this->module = \Module::find($this->moduleName);
+        $this->module = ModuleFacade::find($this->moduleName);
         if (! $this->module) {
             throw new \InvalidArgumentException("Module '{$this->moduleName}' not found.");
         }
@@ -84,6 +85,7 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
 
     protected function addMethodsToClass(ClassType $class): void
     {
+        $this->addAutoRegisterPropertyToClass($class);
         $this->addPanelMethodToClass($class);
         $this->addNavigationLabelMethodToClass($class);
     }
@@ -186,13 +188,6 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
                     ])
                     ->authMiddleware([
                         {$this->simplifyFqn(Authenticate::class)}::class,
-                    ])->navigationItems([
-                        // Add a backlink to the default panel
-                        {$this->simplifyFqn(NavigationItem::class)}::make()
-                            ->label(__('Back Home'))
-                            ->sort(-1000)
-                            ->icon(\Filament\Support\Icons\Heroicon::OutlinedHomeModern)
-                            ->url(filament()->getDefaultPanel()->getUrl()),
                     ]);
                 PHP,
             [$panelId, $urlPath],
@@ -214,5 +209,13 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
     public function isDefault(): bool
     {
         return $this->isDefault;
+    }
+
+    protected function addAutoRegisterPropertyToClass(ClassType $class): void
+    {
+        $class->addProperty('autoRegister', $this->autoRegister)
+            ->setPublic()
+            ->setStatic()
+            ->setType('bool');
     }
 }

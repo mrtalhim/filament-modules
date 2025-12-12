@@ -15,7 +15,35 @@ class Modules
 
     public function getModule(string $name): \Nwidart\Modules\Module
     {
-        return Module::findOrFail($name);
+        $module = Module::find($name);
+
+        // #region agent log
+        try {
+            $logPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
+            app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
+            $payload = json_encode([
+                'sessionId' => 'debug-session',
+                'runId' => 'run2',
+                'hypothesisId' => 'H1',
+                'location' => 'Modules::getModule',
+                'message' => 'module lookup',
+                'data' => [
+                    'name' => $name,
+                    'found' => (bool) $module,
+                    'path' => $module?->getPath(),
+                ],
+                'timestamp' => round(microtime(true) * 1000),
+            ]);
+            file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
+        } catch (\Throwable $e) {
+        }
+        // #endregion agent log
+
+        if (! $module) {
+            return Module::findOrFail($name);
+        }
+
+        return $module;
     }
 
     /**
@@ -100,8 +128,10 @@ class Modules
 
     public function packagePath(string $path = ''): string
     {
-        // return the base path of this package
-        return dirname(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR) . ($path ? DIRECTORY_SEPARATOR . trim($path, DIRECTORY_SEPARATOR) : '');
+        // return the base path of this package (one level above /src)
+        $base = dirname(__DIR__);
+
+        return $base . ($path ? DIRECTORY_SEPARATOR . trim($path, DIRECTORY_SEPARATOR) : '');
     }
 
     public function getMode(): ?ConfigMode
