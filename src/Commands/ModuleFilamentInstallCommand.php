@@ -170,6 +170,7 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
         $filesystem = app(Filesystem::class);
 
         $stubBase = FilamentModules::packagePath('stubs/module/' . $this->frontendPreset);
+
         // #region agent log
         try {
             $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';

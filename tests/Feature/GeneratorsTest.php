@@ -3,8 +3,8 @@
 use Filament\Facades\Filament;
 use Filament\Panel;
 use Filament\PanelRegistry;
-use Laravel\Prompts\Prompt;
 use Illuminate\Filesystem\Filesystem;
+use Laravel\Prompts\Prompt;
 
 use function Pest\Laravel\artisan;
 
@@ -27,7 +27,7 @@ function makeModule(string $name): string
         'files' => [],
     ], JSON_PRETTY_PRINT));
     $filesystem->put($modulePath . '/composer.json', json_encode([
-        'name' => "modules/" . str($name)->kebab(),
+        'name' => 'modules/' . str($name)->kebab(),
         'autoload' => [
             'psr-4' => [
                 "Modules\\\\{$name}\\\\\\" => 'app/',
@@ -194,6 +194,7 @@ test('resource generator preserves fully qualified model argument', function () 
         '--model-fqn' => true,
         '--no-interaction' => true,
     ]);
+
     try {
         $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
         app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
@@ -226,6 +227,7 @@ test('panel provider auto-registers without manual bootstrap edits', function ()
         '--label' => 'Admin Area',
         '--no-interaction' => true,
     ]);
+
     try {
         $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
         app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
@@ -259,6 +261,7 @@ test('module install scaffolds tailwind + vite defaults', function () {
         'module' => 'TailwindModule',
         '--no-interaction' => true,
     ]);
+
     try {
         $logPath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
         app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
@@ -290,4 +293,3 @@ test('module install scaffolds tailwind + vite defaults', function () {
     expect(file_exists($base . '/tailwind.config.js'))->toBeTrue();
     expect(file_exists($base . '/resources/css/app.css'))->toBeTrue();
 });
-
