@@ -16,7 +16,7 @@ class ModuleMakeFilamentThemeCommand extends MakeThemeCommand
 
     protected $description = 'Create a new Filament theme in a module';
 
-    public function handle(Filesystem $filesystem): int
+    public function handle(\Illuminate\Filesystem\Filesystem $filesystem = null): int
     {
         $module = $this->getModule();
 
