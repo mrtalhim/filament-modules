@@ -327,12 +327,16 @@ These steps outline how to install a forked version of this package.
 
 ### 1) Point Composer at the fork
 
-- If you want to pull from your fork’s Git URL:
-  ```bash
-  composer config repositories.filament-modules '{"type":"vcs","url":"https://github.com/<you>/filament-modules"}'
-  ```
+```bash
+composer config repositories.filament-modules vcs http://172.168.4.96/talha/filament-modules.git
+```
 
-### 2) Require the fork
+### 2) Set secure-http as false
+```bash
+composer config secure-http false
+```
+
+### 3) Require the fork
 
 - Remove the old tag if needed:
   ```bash
@@ -344,21 +348,21 @@ These steps outline how to install a forked version of this package.
   ```
   - If you use `minimum-stability: stable`, add `"prefer-stable": true` and allow the `@dev` requirement, or tag your fork and require that tag.
 
-### 3) Refresh autoload & caches
+### 4) Refresh autoload & caches
 
 ```bash
 composer dump-autoload
 php artisan config:clear && php artisan cache:clear
 ```
 
-### 4) (Optional) Re-publish config/stubs if you want the latest defaults
+### 5) (Optional) Re-publish config/stubs if you want the latest defaults
 
 ```bash
 php artisan vendor:publish --tag=modules-config --force
 php artisan vendor:publish --tag=modules-stubs --force # (only if you rely on published stubs)
 ```
 
-### 5) Update each module’s frontend scaffolding (to get Tailwind v4 + Vite stubs)
+### 6) Update each module’s frontend scaffolding (to get Tailwind v4 + Vite stubs)
 
 - For each module:
   ```bash
@@ -369,7 +373,7 @@ php artisan vendor:publish --tag=modules-stubs --force # (only if you rely on pu
   npm install && npm run build # (or centralize builds via workspaces/root Vite if you don’t want per-module installs).
   ```
 
-### 6) Verify the new generators
+### 7) Verify the new generators
 
 - Panel (auto-registers by default):
   ```bash
