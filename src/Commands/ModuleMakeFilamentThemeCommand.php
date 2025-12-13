@@ -5,7 +5,6 @@ namespace Coolsam\Modules\Commands;
 use Coolsam\Modules\Facades\FilamentModules;
 use Filament\Commands\MakeThemeCommand;
 use Filament\Panel;
-use Illuminate\Filesystem\Filesystem;
 use Nwidart\Modules\Module;
 
 use function Laravel\Prompts\text;
@@ -16,7 +15,7 @@ class ModuleMakeFilamentThemeCommand extends MakeThemeCommand
 
     protected $description = 'Create a new Filament theme in a module';
 
-    public function handle(Filesystem $filesystem): int
+    public function handle(): int
     {
         $module = $this->getModule();
 

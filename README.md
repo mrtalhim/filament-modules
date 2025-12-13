@@ -321,29 +321,76 @@ use CanAccessTrait;
 
 use the above trait directly into your resource and page class file to protect your resources and pages.
 
+## Fork Installation
+
+These steps outline how to install a forked version of this package.
+
+### 1) Point Composer at the fork
+
+- If you want to pull from your fork’s Git URL:
+  ```bash
+  composer config repositories.filament-modules '{"type":"vcs","url":"https://github.com/<you>/filament-modules"}'
+  ```
+
+### 2) Require the fork
+
+- Remove the old tag if needed:
+  ```bash
+  composer remove coolsam/modules
+  ```
+- Require the fork (dev branch):
+  ```bash
+  composer require coolsam/modules:*@dev
+  ```
+  - If you use `minimum-stability: stable`, add `"prefer-stable": true` and allow the `@dev` requirement, or tag your fork and require that tag.
+
+### 3) Refresh autoload & caches
+
+```bash
+composer dump-autoload
+php artisan config:clear && php artisan cache:clear
+```
+
+### 4) (Optional) Re-publish config/stubs if you want the latest defaults
+
+```bash
+php artisan vendor:publish --tag=modules-config --force
+php artisan vendor:publish --tag=modules-stubs --force # (only if you rely on published stubs)
+```
+
+### 5) Update each module’s frontend scaffolding (to get Tailwind v4 + Vite stubs)
+
+- For each module:
+  ```bash
+  php artisan module:filament:install <ModuleName> # (add --sass if you prefer Sass)
+  ```
+- Then inside that module:
+  ```bash
+  npm install && npm run build # (or centralize builds via workspaces/root Vite if you don’t want per-module installs).
+  ```
+
+### 6) Verify the new generators
+
+- Panel (auto-registers by default):
+  ```bash
+  php artisan module:make:filament-panel AdminArea <ModuleName>
+  ```
+- Resource (module model):
+  ```bash
+  php artisan module:make:filament-resource Product <ModuleName> --model
+  ```
+- Resource (FQN model):
+  ```bash
+  php artisan module:make:filament-resource "App\\Domain\\Orders\\Order" <ModuleName> --model-fqn
+  ```
+
+**Notes:**
+
+- The fork keeps module-local builds by default (same as the prior plugin). If you prefer a single top-level build, wire module entry points into your root Vite config and drop the per-module `package.json`.
+- If you had `wikimedia/composer-merge-plugin` allowed, the fork no longer needs it—Composer will work without that allow-plugin entry.
+
 ## Testing
 
 ```bash
 composer test
 ```
-
-## Changelog
-
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
-
-## Contributing
-
-Please see [CONTRIBUTING](.github/CONTRIBUTING.md) for details.
-
-## Security Vulnerabilities
-
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
-
-## Credits
-
-- [Sam Maosa](https://github.com/coolsam726)
-- [All Contributors](../../contributors)
-
-## License
-
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.

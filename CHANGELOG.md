@@ -2,6 +2,13 @@
 
 All notable changes to `modules` will be documented in this file.
 
+## Unreleased
+
+### What's Changed
+
+- Update module Tailwind stub to Tailwind 4.1 + @tailwindcss/vite 4.1, Vite 7, laravel-vite-plugin 2 to match Filament v4 defaults.
+- Update Sass module stub to Vite 7 / laravel-vite-plugin 2 for parity.
+
 ## v5.0.8 - 2025-09-10
 
 ### What's Changed
