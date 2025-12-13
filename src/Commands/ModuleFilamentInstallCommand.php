@@ -90,7 +90,10 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
             $this->createDefaultFilamentCluster();
         }
 
-        // TODO: Support creation of panels
+        if (config('filament-modules.module_panel.auto_create_on_install', true)) {
+            // Create default Filament Panel
+            $this->createDefaultFilamentPanel();
+        }
     }
 
     protected function getArguments(): array
@@ -124,7 +127,13 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
             return Module::findOrFail($this->moduleName);
         } catch (ModuleNotFoundException | \Throwable $exception) {
             if (confirm("Module $this->moduleName does not exist. Would you like to generate it?", true)) {
-                $this->call('module:make', ['name' => [$this->moduleName]]);
+                $args = ['name' => [$this->moduleName]];
+
+                if (config('filament-modules.module_panel.skip_nwidart_defaults', true)) {
+                    $args['--plain'] = true;
+                }
+
+                $this->call('module:make', $args);
 
                 return $this->getModule();
             }
@@ -289,6 +298,15 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
             'name' => $module->getStudlyName(),
             'module' => $module->getStudlyName(),
             '--panel' => filament()->getDefaultPanel()->getId(),
+        ]);
+    }
+
+    protected function createDefaultFilamentPanel(): void
+    {
+        $module = $this->getModule();
+        $this->call('module:make:filament-panel', [
+            'id' => config('filament-modules.module_panel.default_id', 'admin'),
+            'module' => $module->getStudlyName(),
         ]);
     }
 }

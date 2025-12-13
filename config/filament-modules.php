@@ -15,4 +15,10 @@ return [
         'group-sort' => 0, // the sort order of the panels group in the navigation
         'open-in-new-tab' => false, // whether to open the panels in a new tab
     ],
+    'module_panel' => [
+        'default_id' => 'admin', // the default ID for a module's Filament panel
+        'path_strategy' => 'module_only', // how the URL path is constructed: 'module_prefix_with_id', 'module_only', 'panel_id_only'
+        'auto_create_on_install' => true, // whether module:filament:install automatically creates a panel
+        'skip_nwidart_defaults' => true, // whether to skip nwidart/laravel-modules default file generation
+    ],
 ];

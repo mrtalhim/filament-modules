@@ -293,3 +293,101 @@ test('module install scaffolds tailwind + vite defaults', function () {
     expect(file_exists($base . '/tailwind.config.js'))->toBeTrue();
     expect(file_exists($base . '/resources/css/app.css'))->toBeTrue();
 });
+
+test('module filament install creates panel when auto_create_on_install is true', function () {
+    makeModule('PanelModule');
+
+    config()->set('filament-modules.module_panel.auto_create_on_install', true);
+    config()->set('filament-modules.module_panel.default_id', 'admin');
+
+    $exit = artisan('module:filament:install', ['module' => 'PanelModule'])->run();
+    expect($exit)->toBe(0);
+
+    $provider = 'Modules\\PanelModule\\Providers\\Filament\\AdminPanelProvider';
+    expect(class_exists($provider))->toBeTrue();
+
+    // Check that the panel provider file exists
+    $panelPath = module_path('PanelModule') . '/app/Providers/Filament/AdminPanelProvider.php';
+    expect(file_exists($panelPath))->toBeTrue();
+});
+
+test('module filament install skips panel creation when auto_create_on_install is false', function () {
+    makeModule('NoPanelModule');
+
+    config()->set('filament-modules.module_panel.auto_create_on_install', false);
+
+    $exit = artisan('module:filament:install', ['module' => 'NoPanelModule'])->run();
+    expect($exit)->toBe(0);
+
+    $provider = 'Modules\\NoPanelModule\\Providers\\Filament\\AdminPanelProvider';
+    expect(class_exists($provider))->toBeFalse();
+});
+
+test('panel provider respects module_only path strategy', function () {
+    makeModule('PathModule');
+
+    config()->set('filament-modules.module_panel.path_strategy', 'module_only');
+
+    $exit = artisan('module:make:filament-panel', [
+        'id' => 'admin',
+        'module' => 'PathModule',
+    ])->run();
+
+    expect($exit)->toBe(0);
+
+    $provider = 'Modules\\PathModule\\Providers\\Filament\\AdminPanelProvider';
+    expect(class_exists($provider))->toBeTrue();
+
+    // Check that panel has the correct path
+    Filament::getPanels(); // Triggers beforeResolving callback that registers panels
+
+    $panel = Filament::getPanel('path-module-admin', false);
+    expect($panel)->not()->toBeNull();
+    expect($panel->getPath())->toBe('path-module');
+});
+
+test('panel provider respects module_prefix_with_id path strategy', function () {
+    makeModule('PrefixModule');
+
+    config()->set('filament-modules.module_panel.path_strategy', 'module_prefix_with_id');
+
+    $exit = artisan('module:make:filament-panel', [
+        'id' => 'admin',
+        'module' => 'PrefixModule',
+    ])->run();
+
+    expect($exit)->toBe(0);
+
+    $provider = 'Modules\\PrefixModule\\Providers\\Filament\\AdminPanelProvider';
+    expect(class_exists($provider))->toBeTrue();
+
+    // Check that panel has the correct path
+    Filament::getPanels(); // Triggers beforeResolving callback that registers panels
+
+    $panel = Filament::getPanel('prefix-module-admin', false);
+    expect($panel)->not()->toBeNull();
+    expect($panel->getPath())->toBe('prefix-module/admin');
+});
+
+test('panel provider respects panel_id_only path strategy', function () {
+    makeModule('IdOnlyModule');
+
+    config()->set('filament-modules.module_panel.path_strategy', 'panel_id_only');
+
+    $exit = artisan('module:make:filament-panel', [
+        'id' => 'admin',
+        'module' => 'IdOnlyModule',
+    ])->run();
+
+    expect($exit)->toBe(0);
+
+    $provider = 'Modules\\IdOnlyModule\\Providers\\Filament\\AdminPanelProvider';
+    expect(class_exists($provider))->toBeTrue();
+
+    // Check that panel has the correct path
+    Filament::getPanels(); // Triggers beforeResolving callback that registers panels
+
+    $panel = Filament::getPanel('id-only-module-admin', false);
+    expect($panel)->not()->toBeNull();
+    expect($panel->getPath())->toBe('admin');
+});

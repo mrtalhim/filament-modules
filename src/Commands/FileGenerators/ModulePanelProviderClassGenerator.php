@@ -145,8 +145,29 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
             : '';
 
         $id = str($this->getId())->kebab()->lower()->toString();
-        $panelId = str($id)->prepend('-')->prepend($this->getModule()->getKebabName())->toString();
-        $urlPath = str($id)->prepend('/')->prepend($this->getModule()->getKebabName())->toString();
+        $moduleKebabName = $this->getModule()->getKebabName();
+
+        // Ensure unique panel ID by combining module name and panel ID
+        $panelId = str($moduleKebabName)->append('-')->append($id)->toString();
+
+        // Determine URL path based on configuration strategy
+        $pathStrategy = config('filament-modules.module_panel.path_strategy', 'module_only');
+        switch ($pathStrategy) {
+            case 'module_prefix_with_id':
+                $urlPath = str($moduleKebabName)->append('/')->append($id)->toString();
+
+                break;
+            case 'panel_id_only':
+                $urlPath = $id;
+
+                break;
+            case 'module_only':
+            default:
+                $urlPath = $moduleKebabName;
+
+                break;
+        }
+
         $label = $this->getModule()->getTitle() . ' ' . str($id)->studly()->snake()->title()->replace(['_', '-'], ' ')->toString();
         $componentsDirectory = Str::studly($panelId);
         $componentsNamespace = (Str::studly($panelId) . '\\');

@@ -47,7 +47,8 @@ class ModulesPlugin implements Plugin
                     ->collapsed(),
             ]);
             $navItems = collect($panels)->map(function (Panel $panel) use ($group, $groupSort, $openInNewTab) {
-                $moduleName = str($panel->getPath())->before('/');
+                // Extract module name from panel ID (format: module-name-panel-id)
+                $moduleName = str($panel->getId())->before('-');
                 $module = Module::find($moduleName);
                 if (! $module) {
                     return null;
