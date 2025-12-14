@@ -4,6 +4,7 @@ namespace Coolsam\Modules\Commands\FileGenerators;
 
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
+use Coolsam\Modules\Http\Middleware\ModulePanelAuthMiddleware;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages\Dashboard;
@@ -11,7 +12,6 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Commands\FileGenerators\ClassGenerator;
-use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -58,7 +58,6 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
             $this->getExtends(),
             Color::class,
             Dashboard::class,
-            AccountWidget::class,
             FilamentInfoWidget::class,
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
@@ -69,7 +68,6 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
             SubstituteBindings::class,
             DisableBladeIconComponents::class,
             DispatchServingFilamentEvent::class,
-            Authenticate::class,
         ];
     }
 
@@ -137,12 +135,10 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
                 PHP
             : '';
 
-        $loginOutput = $isDefault
-            ? <<<'PHP'
+        $loginOutput = <<<'PHP'
 
-                    ->login()
-                PHP
-            : '';
+                    ->login(false)
+                PHP;
 
         $id = str($this->getId())->kebab()->lower()->toString();
         $moduleKebabName = $this->getModule()->getKebabName();
@@ -192,24 +188,28 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
                     ])
                     ->discoverWidgets(in:module("$moduleName", true)->appPath("Filament{\$separator}{$componentsDirectory}{\$separator}Widgets"), for: module("$moduleName", true)->appNamespace('Filament\\{$componentsNamespace}Widgets'))
                     ->widgets([
-                        {$this->simplifyFqn(AccountWidget::class)}::class,
                         {$this->simplifyFqn(FilamentInfoWidget::class)}::class,
                     ])
                     ->discoverClusters(in: module("$moduleName", true)->appPath("Filament{\$separator}{$componentsDirectory}{\$separator}Clusters"), for: module("$moduleName", true)->appNamespace('Filament\\{$componentsNamespace}Clusters'))
+                    ->navigationItems([
+                        \Filament\Navigation\NavigationItem::make('back-to-admin')
+                            ->label(config('filament-modules.panels.back_to_main_label', 'Back to Admin'))
+                            ->icon(config('filament-modules.panels.back_to_main_icon', 'heroicon-o-arrow-left'))
+                            ->url(config('filament-modules.panels.back_to_main_url', '/admin'))
+                            ->sort(-100),
+                    ])
                     ->middleware([
                         {$this->simplifyFqn(EncryptCookies::class)}::class,
                         {$this->simplifyFqn(AddQueuedCookiesToResponse::class)}::class,
                         {$this->simplifyFqn(StartSession::class)}::class,
-                        {$this->simplifyFqn(AuthenticateSession::class)}::class,
                         {$this->simplifyFqn(ShareErrorsFromSession::class)}::class,
                         {$this->simplifyFqn(VerifyCsrfToken::class)}::class,
                         {$this->simplifyFqn(SubstituteBindings::class)}::class,
                         {$this->simplifyFqn(DisableBladeIconComponents::class)}::class,
                         {$this->simplifyFqn(DispatchServingFilamentEvent::class)}::class,
+                        {$this->simplifyFqn(ModulePanelAuthMiddleware::class)}::class,
                     ])
-                    ->authMiddleware([
-                        {$this->simplifyFqn(Authenticate::class)}::class,
-                    ]);
+                    ->authMiddleware([]);
                 PHP,
             [$panelId, $urlPath],
         );

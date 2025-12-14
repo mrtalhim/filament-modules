@@ -14,6 +14,10 @@ return [
         'group-icon' => \Filament\Support\Icons\Heroicon::OutlinedRectangleStack,
         'group-sort' => 0, // the sort order of the panels group in the navigation
         'open-in-new-tab' => false, // whether to open the panels in a new tab
+        'back_to_main_label' => 'Back to Admin', // label for the back to main panel navigation item
+        'back_to_main_icon' => 'heroicon-o-arrow-left', // icon for the back to main panel navigation item
+        'back_to_main_url' => '/admin', // URL for the back to main panel navigation item
+        'require_auth' => true, // whether module panels should enforce authentication (shares main panel auth)
     ],
     'module_panel' => [
         'default_id' => 'admin', // the default ID for a module's Filament panel
