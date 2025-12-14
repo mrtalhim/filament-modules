@@ -1,0 +1,10 @@
+{
+    "name": "PathModule",
+    "alias": "path-module",
+    "description": "",
+    "priority": 0,
+    "providers": [
+        "Modules\\PathModule\\Providers\\PathModuleServiceProvider"
+    ],
+    "files": []
+}

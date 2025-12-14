@@ -1,0 +1,8 @@
+{
+    "name": "modules\/path-module",
+    "autoload": {
+        "psr-4": {
+            "Modules\\\\PathModule\\\\\\": "app\/"
+        }
+    }
+}

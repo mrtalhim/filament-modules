@@ -13,7 +13,7 @@ class ModulePanelAuthMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (config('filament-modules.panels.require_auth', true) && !auth()->check()) {
+        if (config('filament-modules.panels.require_auth', true) && ! auth()->check()) {
             return redirect(config('filament-modules.panels.back_to_main_url', '/admin'));
         }
 
