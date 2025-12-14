@@ -15,8 +15,10 @@
 
 This package brings the power of modules to Laravel Filament. It allows you to organize your filament code into fully
 autonomous modules that can be easily shared and reused across multiple projects.
-With this package, you can turn each of your modules into a fully functional Filament Plugin with its own resources,
-pages, widgets, components and more. What's more, you don't even need to register each of these plugins in your main
+With this package, you can turn each of your modules into a fully functional **Filament Plugin** or **independent Filament Panel** with its own resources,
+pages, widgets, components and more. Module panels feature **centralized authentication** and **configurable navigation** back to your main admin panel.
+
+What's more, you don't even need to register each of these plugins in your main
 Filament Panel. All you need to do is register the `ModulesPlugin` in your panel, and it will take care of the rest for
 you.
 
@@ -31,6 +33,9 @@ with Laravel Filament.
 - A command to create a new Filament resource in your module
 - A command to create a new Filament page in your module
 - A command to create a new Filament widget in your module
+- **🛡️ Centralized Authentication**: Module panels automatically inherit main panel authentication
+- **🔄 Configurable Navigation**: Customizable "Back to Admin" buttons in module panels
+- **🏗️ Independent Panels**: Each module can have its own Filament panel with dedicated URLs
 - Organize your admin panel into Cluster, one for each supported module.
 
 ## Requirements
@@ -42,6 +47,13 @@ The following is a table showing a matrix of supported filament and laravel vers
 | 5.x             | 11.x and 12.x   | 4.x              | 11.x or 12.x                    |
 | 4.x             | 11.x and 12.x   | 3.x              | 11.x or 12.x                    |
 | 3.x             | 10.x            | 3.x              | 11.x                            |
+
+### ✨ What's New in 5.x
+
+- **🛡️ Centralized Authentication**: Module panels now automatically inherit authentication from your main Filament panel
+- **🔄 Configurable Back Navigation**: Customizable "Back to Admin" buttons in module panels with configurable labels, icons, and URLs
+- **🏗️ Independent Module Panels**: Each module can have its own dedicated Filament panel accessible via direct URLs (e.g., `/blog`, `/analytics`)
+- **⚙️ Enhanced Security**: Automatic middleware injection for authentication enforcement across all module panels
 
 v5.x of this package requires the following dependencies:
 
@@ -119,6 +131,57 @@ The following can be adjusted in the configuration file:
 - **panels.open-in-new-tab**: If set to true, the links to the module panels will open in a new tab. This is only
   applicable if the mode is set to support panels.
 - **panels.group-sort**: The sort order applied on each navigation item in the modules panel group.
+- **panels.back_to_main_label**: The label for the "back to main panel" navigation item shown in module panels.
+- **panels.back_to_main_icon**: The icon for the "back to main panel" navigation item (e.g., 'heroicon-o-arrow-left').
+- **panels.back_to_main_url**: The URL to redirect to when clicking the back button (typically your main admin panel URL).
+- **panels.require_auth**: Whether module panels should enforce authentication. When enabled, unauthenticated users are redirected to the main panel.
+
+## Security & Authentication
+
+### Centralized Authentication for Module Panels
+
+When using the **PANELS** mode (`ConfigMode::PANELS`), module panels now feature **centralized authentication** that seamlessly integrates with your main Filament panel. This ensures a consistent security model across your entire application.
+
+#### How It Works
+
+1. **Centralized Auth**: Module panels rely on your main panel's authentication system. They don't maintain separate login/logout routes or UI.
+
+2. **Automatic Middleware**: The `ModulePanelAuthMiddleware` is automatically added to all generated module panels, enforcing authentication checks.
+
+3. **Smart Redirects**: When an unauthenticated user tries to access a module panel directly (e.g., `/analytics`), they are automatically redirected to your main admin panel (`/admin`).
+
+4. **Configurable Security**: You can control authentication enforcement via the `panels.require_auth` configuration option.
+
+#### Example Flow
+
+```mermaid
+graph TD
+    A[User visits /analytics] --> B{Logged in?}
+    B -->|No| C[Redirect to /admin]
+    B -->|Yes| D[Access granted to analytics panel]
+    D --> E[Shows 'Back to Admin' button]
+    E --> F[Returns to /admin]
+```
+
+#### Configuration
+
+```php
+// config/filament-modules.php
+'panels' => [
+    'require_auth' => true, // Enable centralized authentication
+    'back_to_main_label' => 'Back to Admin',
+    'back_to_main_icon' => 'heroicon-o-arrow-left',
+    'back_to_main_url' => '/admin',
+],
+```
+
+#### Security Benefits
+
+- **🔒 Single Source of Truth**: Authentication logic centralized in your main panel
+- **🚫 No Duplicate Auth**: Module panels don't expose separate login endpoints
+- **🔄 Consistent UX**: Unified authentication experience across all panels
+- **🛡️ Automatic Protection**: All module panels are automatically secured
+- **⚙️ Configurable**: Enable/disable authentication per your needs
 
 ## Usage
 
@@ -199,7 +262,7 @@ The **plugin** will be loaded automatically unless the configuration is set othe
 all its clusters automatically.
 
 Panels will register their navigation links in the main panel's navigation if the configuration is set to support panels. In the individual panels, there will also
-be a link to the main panel's navigation, allowing you to navigate back to the main panel.
+be a configurable "Back to Admin" navigation item, allowing you to navigate back to the main panel. The label, icon, and URL of this back button are fully configurable.
 
 Your module is now ready to be used in your Filament Panel. Use the following commands during development to generate
 new resources, pages, widgets, plugins, panels and clusters in your module:
@@ -277,6 +340,40 @@ php artisan module:filament:panel
 php artisan module:filament:make-panel
 ```
 Follow the interactive prompts to create a new panel in your module.
+
+### Example: Creating a Blog Module Panel
+
+```bash
+# 1. Create the module
+php artisan module:make Blog
+
+# 2. Install Filament in the module (creates panel automatically)
+php artisan module:filament:install Blog
+
+# 3. Access your blog panel at /blog
+# The panel will automatically:
+# - Require authentication (redirects to /admin if not logged in)
+# - Show a "Back to Admin" button configured via filament-modules.php
+# - Have its own navigation independent of the main admin panel
+```
+
+### Configuration Example
+
+```php
+// config/filament-modules.php
+return [
+    'mode' => \Coolsam\Modules\Enums\ConfigMode::PANELS->value,
+
+    'panels' => [
+        'group' => 'Module Panels',
+        'group-icon' => 'heroicon-o-squares-2x2',
+        'require_auth' => true, // Enable centralized auth
+        'back_to_main_label' => '← Back to Admin',
+        'back_to_main_icon' => 'heroicon-o-arrow-left',
+        'back_to_main_url' => '/admin',
+    ],
+];
+```
 
 
 ### Protecting your resources, pages and widgets (Access Control) - WIP
