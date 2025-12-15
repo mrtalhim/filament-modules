@@ -94,6 +94,12 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
             // Create default Filament Panel
             $this->createDefaultFilamentPanel();
         }
+
+        // Register module views in service provider
+        $this->registerModuleViews();
+
+        // Generate integration report
+        $this->generateIntegrationReport();
     }
 
     protected function getArguments(): array
@@ -210,6 +216,9 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
         $stubs = [
             $stubBase . DIRECTORY_SEPARATOR . 'package.json' => $module->getPath() . DIRECTORY_SEPARATOR . 'package.json',
             $stubBase . DIRECTORY_SEPARATOR . 'vite.config.js' => $module->getExtraPath('vite.config.js'),
+            FilamentModules::packagePath('stubs/module/.gitignore.stub') => $module->getPath() . DIRECTORY_SEPARATOR . '.gitignore',
+            FilamentModules::packagePath('stubs/module/README.md.stub') => $module->getPath() . DIRECTORY_SEPARATOR . 'README.md',
+            FilamentModules::packagePath('stubs/module/CHANGELOG.md.stub') => $module->getPath() . DIRECTORY_SEPARATOR . 'CHANGELOG.md',
         ];
 
         if ($this->frontendPreset === 'tailwind') {
@@ -225,7 +234,16 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
             }
 
             $filesystem->ensureDirectoryExists(pathinfo($to, PATHINFO_DIRNAME));
-            $filesystem->copy($from, $to);
+
+            // Handle template files with replacements
+            if (str_ends_with($from, 'README.md.stub') || str_ends_with($from, 'CHANGELOG.md.stub')) {
+                $content = file_get_contents($from);
+                $content = $this->applyTemplateReplacements($content, $module);
+                $filesystem->put($to, $content);
+            } else {
+                $filesystem->copy($from, $to);
+            }
+
             $this->info("Scaffolded: {$to}");
 
             // #region agent log
@@ -308,5 +326,297 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
             'id' => config('filament-modules.module_panel.default_id', 'admin'),
             'module' => $module->getStudlyName(),
         ]);
+    }
+
+    protected function registerModuleViews(): void
+    {
+        $module = $this->getModule();
+        $serviceProviderPath = $module->appPath('Providers/' . $module->getStudlyName() . 'ServiceProvider.php');
+
+        if (! file_exists($serviceProviderPath)) {
+            $this->warn("Service provider not found at {$serviceProviderPath}. Skipping view registration.");
+            return;
+        }
+
+        $content = file_get_contents($serviceProviderPath);
+
+        // Check if view registration is already present
+        if (str_contains($content, 'loadViewsFrom')) {
+            $this->info('View registration already exists in service provider.');
+            return;
+        }
+
+        // Generate view namespace from module name (kebab-case)
+        $viewNamespace = str($module->getName())->kebab()->toString();
+
+        // Add view registration to the boot method
+        $viewRegistrationCode = <<<PHP
+
+    public function boot()
+    {
+        \$this->loadViewsFrom(
+            module_path('{$module->getName()}', 'resources/views'),
+            '{$viewNamespace}'
+        );
+    }
+PHP;
+
+        // Replace empty boot method or add to existing boot method
+        if (str_contains($content, 'public function boot(): void')) {
+            // Replace empty boot method
+            $content = str_replace(
+                '    public function boot(): void {}',
+                $viewRegistrationCode,
+                $content
+            );
+        } elseif (str_contains($content, 'public function boot()')) {
+            // Replace empty boot method (without return type)
+            $content = str_replace(
+                '    public function boot() {}',
+                $viewRegistrationCode,
+                $content
+            );
+        } else {
+            // Add boot method if it doesn't exist
+            $content = str_replace(
+                '    public function register(): void {}',
+                '    public function register(): void {}
+
+' . $viewRegistrationCode,
+                $content
+            );
+        }
+
+        file_put_contents($serviceProviderPath, $content);
+        $this->info("Registered module views with namespace '{$viewNamespace}' in service provider.");
+    }
+
+    protected function applyTemplateReplacements(string $content, \Nwidart\Modules\Module $module): string
+    {
+        $panelId = config('filament-modules.module_panel.default_id', 'admin');
+        $moduleKebabName = $module->getKebabName();
+        $panelIdWithModule = str($moduleKebabName)->append('-')->append($panelId)->toString();
+
+        // Determine URL path based on configuration strategy
+        $pathStrategy = config('filament-modules.module_panel.path_strategy', 'module_only');
+        switch ($pathStrategy) {
+            case 'module_prefix_with_id':
+                $panelPath = str($moduleKebabName)->append('/')->append($panelId)->toString();
+                break;
+            case 'panel_id_only':
+                $panelPath = $panelId;
+                break;
+            case 'module_only':
+            default:
+                $panelPath = $moduleKebabName;
+                break;
+        }
+
+        $replacements = [
+            '{{ module_name }}' => $module->getTitle() ?: $module->getStudlyName(),
+            '{{ module_description }}' => 'A Filament module for ' . ($module->getTitle() ?: $module->getStudlyName()),
+            '{{ panel_name }}' => str($panelId)->studly()->snake()->title()->replace(['_', '-'], ' ')->toString(),
+            '{{ panel_path }}' => $panelPath,
+            '{{ laravel_version }}' => app()->version(),
+            '{{ filament_version }}' => \Composer\InstalledVersions::getVersion('filament/filament') ?? '3.x',
+            '{{ php_version }}' => PHP_VERSION,
+        ];
+
+        return str_replace(array_keys($replacements), array_values($replacements), $content);
+    }
+
+    protected function generateIntegrationReport(): void
+    {
+        $module = $this->getModule();
+
+        $this->info("📋 Integration Report for Module: {$module->getName()}");
+        $this->line("═══════════════════════════════════════════════════════════════");
+
+        // Files Created
+        $this->reportSection("📁 Files Created", $this->getCreatedFiles($module));
+
+        // Panels Created
+        $this->reportSection("📊 Panels Created", $this->getCreatedPanels($module));
+
+        // Plugins Created
+        if ($this->mode->shouldRegisterPlugins()) {
+            $this->reportSection("🔌 Plugins Created", $this->getCreatedPlugins($module));
+        }
+
+        // Route Information
+        $this->reportSection("🛣️  Route Information", $this->getRouteInformation($module));
+
+        // Assets Information
+        $this->reportSection("🎨 Assets Information", $this->getAssetsInformation($module));
+
+        // Next Steps
+        $this->reportSection("🚀 Next Steps", $this->getNextSteps($module));
+
+        $this->line("═══════════════════════════════════════════════════════════════");
+        $this->info("✅ Module installation completed successfully!");
+    }
+
+    protected function reportSection(string $title, array $items): void
+    {
+        $this->line("{$title}:");
+
+        if (empty($items)) {
+            $this->line("   (none)");
+        } else {
+            foreach ($items as $item) {
+                $this->line("   • {$item}");
+            }
+        }
+
+        $this->line("");
+    }
+
+    protected function getCreatedFiles(\Nwidart\Modules\Module $module): array
+    {
+        $files = [];
+
+        // Check for service provider
+        $serviceProviderPath = $module->appPath('Providers/' . $module->getStudlyName() . 'ServiceProvider.php');
+        if (file_exists($serviceProviderPath)) {
+            $files[] = "Service Provider: app/Providers/{$module->getStudlyName()}ServiceProvider.php";
+        }
+
+        // Check for Filament directories
+        $filamentDirectories = [
+            'app/Filament',
+            'app/Filament/Pages',
+            'app/Filament/Resources',
+            'app/Filament/Widgets',
+            'app/Providers/Filament',
+        ];
+
+        foreach ($filamentDirectories as $dir) {
+            if (is_dir($module->appPath($dir))) {
+                $files[] = "Directory: {$dir}/";
+            }
+        }
+
+        // Check for frontend files
+        $frontendFiles = [
+            'package.json',
+            'vite.config.js',
+            'tailwind.config.js',
+            'resources/css/app.css',
+            'resources/js/app.js',
+            '.gitignore',
+            'README.md',
+            'CHANGELOG.md',
+        ];
+
+        foreach ($frontendFiles as $file) {
+            $filePath = $module->getPath() . '/' . $file;
+            if (file_exists($filePath)) {
+                $files[] = "File: {$file}";
+            }
+        }
+
+        return $files;
+    }
+
+    protected function getCreatedPanels(\Nwidart\Modules\Module $module): array
+    {
+        $panels = [];
+
+        // Check for panel providers
+        $panelProviderPath = $module->appPath('Providers/Filament');
+        if (is_dir($panelProviderPath)) {
+            $panelFiles = glob($panelProviderPath . '/*PanelProvider.php');
+            foreach ($panelFiles as $panelFile) {
+                $panelName = basename($panelFile, 'PanelProvider.php');
+                $panels[] = "{$panelName} Panel Provider";
+            }
+        }
+
+        return $panels;
+    }
+
+    protected function getCreatedPlugins(\Nwidart\Modules\Module $module): array
+    {
+        $plugins = [];
+
+        // Check for plugin files
+        $pluginPath = $module->appPath('Filament');
+        if (is_dir($pluginPath)) {
+            $pluginFiles = glob($pluginPath . '/*Plugin.php');
+            foreach ($pluginFiles as $pluginFile) {
+                $pluginName = basename($pluginFile, 'Plugin.php');
+                $plugins[] = "{$pluginName} Plugin";
+            }
+        }
+
+        return $plugins;
+    }
+
+    protected function getRouteInformation(\Nwidart\Modules\Module $module): array
+    {
+        $info = [];
+
+        // Get panels to determine route prefixes
+        $panels = FilamentModules::getModulePanels($module->getName());
+        foreach ($panels as $panel) {
+            $panelId = $panel->getId();
+            $routePrefix = config('filament-modules.module_panel.route_prefix_pattern', '{panel-id}');
+            $actualPrefix = str_replace(
+                ['{panel-id}', '{module-slug}'],
+                [$panelId, $module->getKebabName()],
+                $routePrefix
+            );
+
+            $info[] = "Panel '{$panelId}' uses route prefix: '{$actualPrefix}'";
+        }
+
+        if (empty($info)) {
+            $info[] = "No panels configured yet. Run 'php artisan module:make:filament-panel' to create panels.";
+        }
+
+        return $info;
+    }
+
+    protected function getAssetsInformation(\Nwidart\Modules\Module $module): array
+    {
+        $info = [];
+
+        // Check for CSS files
+        $cssFiles = glob($module->getPath() . '/resources/css/**/*.css');
+        if (! empty($cssFiles)) {
+            $info[] = count($cssFiles) . " CSS file(s) found in resources/css/";
+        }
+
+        // Check for JS files
+        $jsFiles = glob($module->getPath() . '/resources/js/**/*.js');
+        if (! empty($jsFiles)) {
+            $info[] = count($jsFiles) . " JavaScript file(s) found in resources/js/";
+        }
+
+        if (! empty($cssFiles) || ! empty($jsFiles)) {
+            $info[] = "Run 'php artisan module:assets:discover --update-vite' to register assets";
+        } else {
+            $info[] = "No asset files found";
+        }
+
+        return $info;
+    }
+
+    protected function getNextSteps(\Nwidart\Modules\Module $module): array
+    {
+        $steps = [
+            "Create resources: php artisan module:make:filament-resource MyResource {$module->getName()}",
+            "Create pages: php artisan module:make:filament-page MyPage {$module->getName()}",
+            "Create panels: php artisan module:make:filament-panel MyPanel {$module->getName()}",
+            "Check module health: php artisan module:health {$module->getName()}",
+        ];
+
+        // Add asset discovery if assets exist
+        $hasAssets = ! empty(glob($module->getPath() . '/resources/{css,js}/**/*.{css,js}', GLOB_BRACE));
+        if ($hasAssets) {
+            array_splice($steps, 3, 0, ["Discover assets: php artisan module:assets:discover"]);
+        }
+
+        return $steps;
     }
 }

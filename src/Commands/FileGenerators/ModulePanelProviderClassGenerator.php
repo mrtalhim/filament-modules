@@ -142,8 +142,13 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
         $id = str($this->getId())->kebab()->lower()->toString();
         $moduleKebabName = $this->getModule()->getKebabName();
 
-        // Ensure unique panel ID by combining module name and panel ID
-        $panelId = str($moduleKebabName)->append('-')->append($id)->toString();
+        // Generate panel ID based on configuration pattern
+        $panelIdPattern = config('filament-modules.module_panel.panel_id_pattern', '{module-slug}-{panel-name}');
+        $panelId = str_replace(
+            ['{module-slug}', '{panel-name}'],
+            [$moduleKebabName, $id],
+            $panelIdPattern
+        );
 
         // Determine URL path based on configuration strategy
         $pathStrategy = config('filament-modules.module_panel.path_strategy', 'module_only');
@@ -170,12 +175,21 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
         $rootNamespace = str($this->getModule()->namespace())->rtrim('\\')->append('\\')->toString();
         $moduleName = $this->getModule()->getName();
 
+        // Generate route prefix based on configuration pattern
+        $routePrefixPattern = config('filament-modules.module_panel.route_prefix_pattern', '{panel-id}');
+        $routePrefix = str_replace(
+            ['{panel-id}', '{module-slug}'],
+            [$panelId, $moduleKebabName],
+            $routePrefixPattern
+        );
+
         return new Literal(
             <<<PHP
                 \$separator = DIRECTORY_SEPARATOR;
                 return \$panel{$defaultOutput}
                     ->id(?)
                     ->path(?){$loginOutput}
+                    ->routePrefix(?)
                     ->brandName(\$this->getNavigationLabel())
                     ->colors([
                         'primary' => {$this->simplifyFqn(Color::class)}::Amber,
@@ -210,7 +224,7 @@ class ModulePanelProviderClassGenerator extends ClassGenerator
                     ])
                     ->authMiddleware([]);
                 PHP,
-            [$panelId, $urlPath],
+            [$panelId, $urlPath, $routePrefix],
         );
     }
 

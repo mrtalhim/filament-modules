@@ -24,5 +24,21 @@ return [
         'path_strategy' => 'module_only', // how the URL path is constructed: 'module_prefix_with_id', 'module_only', 'panel_id_only'
         'auto_create_on_install' => true, // whether module:filament:install automatically creates a panel
         'skip_nwidart_defaults' => true, // whether to skip nwidart/laravel-modules default file generation
+        'panel_id_pattern' => '{module-slug}-{panel-name}', // pattern for generating panel IDs: '{module-slug}-{panel-name}', '{panel-name}', etc.
+        'route_prefix_pattern' => '{panel-id}', // pattern for generating route prefixes: '{panel-id}', '{module-slug}', '{module-slug}-{panel-id}'
+    ],
+
+    'module_generator' => [
+        'include_gitignore' => true, // whether to generate .gitignore file when installing filament
+        'include_readme' => true, // whether to generate README.md file when installing filament
+        'auto_register_views' => true, // whether to auto-register view namespaces in service provider
+        'generate_route_helpers' => false, // whether to automatically generate route helper traits
+    ],
+
+    'asset_discovery' => [
+        'enabled' => true, // whether asset discovery is enabled
+        'auto_add_to_vite' => false, // whether to automatically update vite.config.js
+        'css_paths' => ['resources/css/**/*.css'], // glob patterns for CSS files
+        'js_paths' => ['resources/js/**/*.js'], // glob patterns for JS files
     ],
 ];
