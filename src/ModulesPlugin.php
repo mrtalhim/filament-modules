@@ -46,23 +46,44 @@ class ModulesPlugin implements Plugin
                     ->icon($groupIcon)
                     ->collapsed(),
             ]);
-            $navItems = collect($panels)->map(function (Panel $panel) use ($group, $groupSort, $openInNewTab) {
-                // Extract module name from panel ID (format: module-name-panel-id)
-                $moduleName = str($panel->getId())->before('-');
-                $module = Module::find($moduleName);
+
+            $navItems = collect($panels)->map(function (Panel $modulePanel) use ($group, $groupSort, $openInNewTab) {
+                // Extract module name from panel ID (format: module-kebab-name-panel-id)
+                // Need to find the correct module name by trying different prefixes
+                $panelId = $modulePanel->getId();
+                $parts = explode('-', $panelId);
+                $module = null;
+                $moduleNameKebab = null;
+
+                // Try all possible module name prefixes (from longest to shortest)
+                for ($i = count($parts) - 1; $i > 0; $i--) {
+                    $possibleModuleNameKebab = implode('-', array_slice($parts, 0, $i));
+                    // Convert kebab-case to StudlyCase for Module::find()
+                    $possibleModuleNameStudly = str($possibleModuleNameKebab)->studly()->toString();
+                    $foundModule = Module::find($possibleModuleNameStudly);
+                    if ($foundModule) {
+                        $module = $foundModule;
+                        $moduleNameKebab = $possibleModuleNameKebab;
+                        break;
+                    }
+                }
+
                 if (! $module) {
                     return null;
                 }
-                //                $panelLabel = str($panel->getId())->after($moduleName)->trim('-')->snake()->title()->replace('_', ' ');
-                //                $label = str($module->getTitle())->append(" - ")->append($panelLabel);
-                $label = $panel->getBrandName() ?? str($panel->getId())->after($moduleName)->trim('-')->studly()->snake()->replace('_', ' ')->toString();
+
+                // Extract panel label from the remaining parts after module name
+                $panelLabelParts = array_slice($parts, count(explode('-', $moduleNameKebab)));
+                $panelLabel = implode('-', $panelLabelParts);
+                $label = $modulePanel->getBrandName() ?? str($panelLabel)->studly()->snake()->replace('_', ' ')->toString();
 
                 return NavigationItem::make($label)
                     ->group($group)
                     ->sort($groupSort)
-                    ->url($panel->getUrl())
+                    ->url($modulePanel->getUrl())
                     ->openUrlInNewTab($openInNewTab);
-            })->toArray();
+            })->filter()->toArray();
+
             $panel->navigationItems($navItems);
         }
     }
@@ -92,6 +113,9 @@ class ModulesPlugin implements Plugin
         $pattern = str($basePath . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . $appPath . 'Filament' . DIRECTORY_SEPARATOR . '*Plugin.php')->replace('//', '/')->toString();
         $pluginPaths = glob($pattern);
 
+        // Normalize paths to use consistent directory separators (fixes Windows mixed-slash issue)
+        $pluginPaths = array_map(fn($path) => str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path), $pluginPaths);
+
         return collect($pluginPaths)->map(fn ($path) => FilamentModules::convertPathToNamespace($path))->toArray();
 
     }
@@ -108,6 +132,9 @@ class ModulesPlugin implements Plugin
         $appFolder = str(config('modules.paths.app_folder', 'app'));
         $pattern = $basePath . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . $appFolder . DIRECTORY_SEPARATOR . 'Providers' . DIRECTORY_SEPARATOR . 'Filament' . DIRECTORY_SEPARATOR . '*.php';
         $panelPaths = glob($pattern);
+
+        // Normalize paths to use consistent directory separators (fixes Windows mixed-slash issue)
+        $panelPaths = array_map(fn($path) => str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path), $panelPaths);
 
         $panelIds = collect($panelPaths)->map(fn ($path) => FilamentModules::convertPathToNamespace($path))->map(function ($class) {
             // Get the panel ID and check if it is registered
