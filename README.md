@@ -5,42 +5,35 @@
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/savannabits/filament-modules/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/savannabits/filament-modules/actions?query=workflow%3Afix-php-code-style+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/coolsam/modules.svg?style=flat-square)](https://packagist.org/packages/coolsam/modules)
 
-> **NOTE:** This documentation is for **version 5.x** of the package, which supports **Laravel 11+**, **Filament 4.x**
-> and
-**nwidart/laravel-modules 11+**. If you are using Filament 3.x, please refer
-> to [4.x documentation](https://github.com/savannabits/filament-modules/tree/4.x)
-> or [3.x documentation](https://github.com/savannabits/filament-modules/tree/3.x) if you are using Laravel 10.
+> **NOTE:** This documentation is for **version 5.x** of the package, which supports **Laravel 11+**, **Filament 4.x** and **nwidart/laravel-modules 11+**. If you are using Filament 3.x, please refer to [4.x documentation](https://github.com/savannabits/filament-modules/tree/4.x) or [3.x documentation](https://github.com/savannabits/filament-modules/tree/3.x) if you are using Laravel 10.
 
 ![image](https://github.com/savannabits/filament-modules/assets/5610289/ba191f1d-b5ee-4eb9-9db7-d42a19cc8d38)
 
-This package brings the power of modules to Laravel Filament. It allows you to organize your filament code into fully
-autonomous modules that can be easily shared and reused across multiple projects.
-With this package, you can turn each of your modules into a fully functional **Filament Plugin** or **independent Filament Panel** with its own resources,
-pages, widgets, components and more. Module panels feature **centralized authentication** and **configurable navigation** back to your main admin panel.
+This package brings the power of modules to Laravel Filament. It allows you to organize your Filament code into fully autonomous modules that can be easily shared and reused across multiple projects.
 
-What's more, you don't even need to register each of these plugins in your main
-Filament Panel. All you need to do is register the `ModulesPlugin` in your panel, and it will take care of the rest for
-you.
+With this package, you can turn each of your modules into a fully functional **Filament Plugin** or **independent Filament Panel** with its own resources, pages, widgets, components and more. Module panels feature **centralized authentication** and **configurable navigation** back to your main admin panel.
 
-This package is simple a wrapper of [nwidart/laravel-modules](https://docs.laravelmodules.com) package to make it work
-with Laravel Filament.
+## 📚 Documentation
+
+**Full documentation is available in the [docs folder](docs/).**
+
+- **[Getting Started](docs/guides/getting-started.md)** - Quick start guide
+- **[Installation](docs/installation.md)** - Installation and setup
+- **[Configuration](docs/configuration.md)** - Configuration options
+- **[Commands Reference](docs/commands/index.md)** - All available commands
+- **[Guides](docs/guides/)** - Comprehensive guides and tutorials
 
 ## Features
 
-- A command to prepare your module for Filament
-- A command to create a Filament Cluster in your module
-- A command to create additional Filament Plugins in your module
-- A command to create a new Filament resource in your module
-- A command to create a new Filament page in your module
-- A command to create a new Filament widget in your module
-- **🛡️ Centralized Authentication**: Module panels automatically inherit main panel authentication
-- **🔄 Configurable Navigation**: Customizable "Back to Admin" buttons in module panels
-- **🏗️ Independent Panels**: Each module can have its own Filament panel with dedicated URLs
-- Organize your admin panel into Cluster, one for each supported module.
+- 🛡️ **Centralized Authentication**: Module panels automatically inherit main panel authentication
+- 🔄 **Configurable Navigation**: Customizable "Back to Admin" buttons in module panels
+- 🏗️ **Independent Panels**: Each module can have its own Filament panel with dedicated URLs
+- 📦 **Auto-Discovery**: Automatic registration of plugins and panels
+- 🎨 **Asset Management**: Built-in asset discovery and Vite integration
+- 🔧 **Developer Tools**: Health checks, validation, and migration tools
+- 🚀 **Quick Setup**: Simple commands to scaffold Filament components in modules
 
 ## Requirements
-
-The following is a table showing a matrix of supported filament and laravel versions for each version of this package:
 
 | Package Version | Laravel Version | Filament Version | nwidart/laravel-modules Version |
 |-----------------|-----------------|------------------|---------------------------------|
@@ -48,450 +41,118 @@ The following is a table showing a matrix of supported filament and laravel vers
 | 4.x             | 11.x and 12.x   | 3.x              | 11.x or 12.x                    |
 | 3.x             | 10.x            | 3.x              | 11.x                            |
 
-### ✨ What's New in 5.x
-
-- **🛡️ Centralized Authentication**: Module panels now automatically inherit authentication from your main Filament panel
-- **🔄 Configurable Back Navigation**: Customizable "Back to Admin" buttons in module panels with configurable labels, icons, and URLs
-- **🏗️ Independent Module Panels**: Each module can have its own dedicated Filament panel accessible via direct URLs (e.g., `/blog`, `/analytics`)
-- **⚙️ Enhanced Security**: Automatic middleware injection for authentication enforcement across all module panels
-
-v5.x of this package requires the following dependencies:
-
+v5.x requires:
 - Laravel 11.x or 12.x
 - Filament 4.x or higher
 - PHP 8.2 or higher
 - nwidart/laravel-modules 11.x or 12.x
 
-## Installation
-
-You can install the package via composer:
+## Quick Installation
 
 ```bash
 composer require coolsam/modules
 ```
 
-This will automatically install `nwidart/laravel-modules: ^11` (for Laravel 11) or `nwidart/laravel-modules: ^12` (for
-Laravel 12) as well. Make sure you go through
-the [documentation](https://laravelmodules.com/docs/12) to understand how to use the package and to configure it
-properly before proceeding.
-
-**Task: Configure your Laravel Modules first before continuing.**
-
-### Autoloading modules
-
-Don't forget to autoload modules by adding the merge-plugin to your composer.json according to the [laravel modules documentation](https://laravelmodules.com/docs/12/getting-started/installation-and-setup#autoloading):
-
-```json
-"extra": {
-    "laravel": {
-        "dont-discover": []
-    },
-    "merge-plugin": {
-        "include": [
-            "Modules/*/composer.json"
-        ]
-    }
-},
-```
-
-Next, Run the installation command and follow the prompts to publish the config file and set up the package:
-
-```bash
-php artisan modules:install
-```
-
-Alternatively, you can just publish the config file with:
-
-```bash
-php artisan vendor:publish --tag="modules-config"
-```
-
-### Configuration
-
-After publishing the config file, you can configure the package to your liking. The configuration file is located
-at `config/filament-modules.php`.
-
-The following can be adjusted in the configuration file:
-
-- **mode**: The mode used by the package to discover and register resources from modules. This can be set to plugins,
-  panels or both (default). See the ConfigMode enum for details.
-- **auto-register-plugins**: If set to true, the package will automatically register all the plugins in your modules.
-  Otherwise, you will need to register each plugin manually in your Filament Panel.
-- **clusters.enabled**: If set to true, a cluster will be created in each module during the `module:filament:install`
-  command and all filament files for that module may reside inside that cluster. Otherwise, filament files will reside
-  in Filament/Resources, Filament/Pages, Filament/Widgets, etc.
-- **clusters.use-top-navigation**: If set to true, the top navigation will be used to navigate between clusters while
-  the actual links will be loaded as a side sub-navigation. In my opinion, this improves UX. Otherwise, the package will
-  honor the configuration that you have in your panel.
-- **panels.group**: The group under which the panels will be registered in the Main Panel's navigation. This is only
-  applicable if the mode is set to support panels. All links to the various module panels will be grouped under this
-  group in the main panel's navigation for ease of navigation.
-- **panels.group-icon**: The group icon used in the above navigation. This is only applicable if the mode is set to
-  support panels.
-- **panels.open-in-new-tab**: If set to true, the links to the module panels will open in a new tab. This is only
-  applicable if the mode is set to support panels.
-- **panels.group-sort**: The sort order applied on each navigation item in the modules panel group.
-- **panels.back_to_main_label**: The label for the "back to main panel" navigation item shown in module panels.
-- **panels.back_to_main_icon**: The icon for the "back to main panel" navigation item (e.g., 'heroicon-o-arrow-left').
-- **panels.back_to_main_url**: The URL to redirect to when clicking the back button (typically your main admin panel URL).
-- **panels.require_auth**: Whether module panels should enforce authentication. When enabled, unauthenticated users are redirected to the main panel.
-
-## Security & Authentication
-
-### Centralized Authentication for Module Panels
-
-When using the **PANELS** mode (`ConfigMode::PANELS`), module panels now feature **centralized authentication** that seamlessly integrates with your main Filament panel. This ensures a consistent security model across your entire application.
-
-#### How It Works
-
-1. **Centralized Auth**: Module panels rely on your main panel's authentication system. They don't maintain separate login/logout routes or UI.
-
-2. **Automatic Middleware**: The `ModulePanelAuthMiddleware` is automatically added to all generated module panels, enforcing authentication checks.
-
-3. **Smart Redirects**: When an unauthenticated user tries to access a module panel directly (e.g., `/analytics`), they are automatically redirected to your main admin panel (`/admin`).
-
-4. **Configurable Security**: You can control authentication enforcement via the `panels.require_auth` configuration option.
-
-#### Example Flow
-
-```mermaid
-graph TD
-    A[User visits /analytics] --> B{Logged in?}
-    B -->|No| C[Redirect to /admin]
-    B -->|Yes| D[Access granted to analytics panel]
-    D --> E[Shows 'Back to Admin' button]
-    E --> F[Returns to /admin]
-```
-
-#### Configuration
+Register the plugin in your Filament panel:
 
 ```php
-// config/filament-modules.php
-'panels' => [
-    'require_auth' => true, // Enable centralized authentication
-    'back_to_main_label' => 'Back to Admin',
-    'back_to_main_icon' => 'heroicon-o-arrow-left',
-    'back_to_main_url' => '/admin',
-],
-```
-
-#### Security Benefits
-
-- **🔒 Single Source of Truth**: Authentication logic centralized in your main panel
-- **🚫 No Duplicate Auth**: Module panels don't expose separate login endpoints
-- **🔄 Consistent UX**: Unified authentication experience across all panels
-- **🛡️ Automatic Protection**: All module panels are automatically secured
-- **⚙️ Configurable**: Enable/disable authentication per your needs
-
-## Usage
-
-### Register the plugin
-
-The package comes with a `ModulesPlugin` that you can register in your Filament Panel. This plugin will automatically
-load all the modules in your application and register them as Filament plugins if the mode supports plugins (either
-PLUGINS or BOTH).
-If the configuration mode supports panels, the module is also responsible for automatically creating navigation links
-between the main panel and each of the module panels.
-In order to achieve this, you need to register the `ModulesPlugin` in your panel of choice (e.g. Admin Panel) like so:
-
-```php
-// e.g. in App\Providers\Filament\AdminPanelProvider.php
- 
 use Coolsam\Modules\ModulesPlugin;
+
 public function panel(Panel $panel): Panel
 {
     return $panel
-        ...
         ->plugin(ModulesPlugin::make());
 }
 ```
 
-That's it! now you are ready to start creating some filament code in your module of choice!
-
-### Installing Filament in a module
-
-If you don't have a module already, you can generate one using the `module:make` command like so:
+Create your first module:
 
 ```bash
-php artisan module:make MyModule
+php artisan module:make Blog
+php artisan module:filament:install Blog
+php artisan module:make:filament-resource Post Blog --model
 ```
 
-Next, run the `module:filament:install` command to generate the necessary Filament files and directories in your module:
+See the [Installation Guide](docs/installation.md) for detailed setup instructions.
+
+## Quick Start
 
 ```bash
-php artisan module:filament:install MyModule
-```
-
-This will guide you interactively on whether you want to organize your code in clusters, and whether you would like to
-create a default cluster.
-At the end of this installation, you will have the following structure in your module:
-
-- Modules
-    - MyModule
-        - app
-            - Filament
-                - Clusters
-                    - MyModule
-                        - Pages
-                        - Resources
-                        - Widgets
-                    - **MyModule.php**
-                - Pages
-                - Resources
-                - Widgets
-                - OneModulePanel
-                    - Pages
-                    - Resources
-                    - Widgets
-                - AnotherModulePanel
-                    - Pages
-                    - Resources
-                    - Widgets
-                - **MyModulePlugin.php**
-            - Providers
-                - Filament
-                    - OneModulePanelServiceProvider.php
-                    - AnotherModulePanelServiceProvider.php
-                - **MyModuleServiceProvider.php**
-
-As you can see, there are two main files generated: The plugin class and optionally the cluster class. After generation,
-you are free to make any modifications to these classes as you may see fit. Optionally, Panels are also generated inside the module if supported.
-All these can be generated individually later using their respective commands.
-
-The **plugin** will be loaded automatically unless the configuration is set otherwise. As a result, it will also load
-all its clusters automatically.
-
-Panels will register their navigation links in the main panel's navigation if the configuration is set to support panels. In the individual panels, there will also
-be a configurable "Back to Admin" navigation item, allowing you to navigate back to the main panel. The label, icon, and URL of this back button are fully configurable.
-
-Your module is now ready to be used in your Filament Panel. Use the following commands during development to generate
-new resources, pages, widgets, plugins, panels and clusters in your module:
-
-### Creating a new resource
-
-```bash
-php artisan module:make:filament-resource
-# Aliases
-php artisan module:filament:resource
-php artisan module:filament:make-resource
-```
-
-Follow the interactive prompts to create a new resource in your module.
-
-### Creating a new page
-
-```bash
-php artisan module:make:filament-page
-# or
-php artisan module:filament:page
-php artisan module:filament:make-page
-```
-
-Follow the interactive prompts to create a new page in your module.
-
-### Creating a new widget (WIP)
-
-```bash
-php artisan module:make:filament-widget
-# or
-php artisan module:filament:widget
-php artisan module:filament:make-widget
-```
-
-Follow the interactive prompts to create a new widget in your module.
-
-### Creating a new cluster
-
-```bash
-php artisan module:make:filament-cluster
-# or
-php artisan module:filament:cluster
-php artisan module:filament:make-cluster
-```
-
-Follow the interactive prompts to create a new cluster in your module.
-
-### Creating a new plugin
-
-```bash
-php artisan module:make:filament-plugin
-# or
-php artisan module:filament:plugin
-php artisan module:filament:make-plugin
-```
-
-Follow the interactive prompts to create a new plugin in your module.
-
-### Create a new Filament Theme (WIP)
-
-```bash
-php artisan module:make:filament-theme
-# or
-php artisan module:filament:theme
-php artisan module:filament:make-theme
-```
-
-### Create a new Filament Panel (New!!)
-
-```bash
-php artisan module:make:filament-panel
-# or
-php artisan module:filament:panel
-php artisan module:filament:make-panel
-```
-Follow the interactive prompts to create a new panel in your module.
-
-### Example: Creating a Blog Module Panel
-
-```bash
-# 1. Create the module
+# Create a module
 php artisan module:make Blog
 
-# 2. Install Filament in the module (creates panel automatically)
+# Install Filament support
 php artisan module:filament:install Blog
 
-# 3. Access your blog panel at /blog
-# The panel will automatically:
-# - Require authentication (redirects to /admin if not logged in)
-# - Show a "Back to Admin" button configured via filament-modules.php
-# - Have its own navigation independent of the main admin panel
+# Create a resource with model
+php artisan module:make:filament-resource Post Blog --model
+
+# Create a page
+php artisan module:make:filament-page Dashboard Blog
 ```
 
-### Configuration Example
+For more examples, see the [Getting Started Guide](docs/guides/getting-started.md).
 
-```php
-// config/filament-modules.php
-return [
-    'mode' => \Coolsam\Modules\Enums\ConfigMode::PANELS->value,
+## Available Commands
 
-    'panels' => [
-        'group' => 'Module Panels',
-        'group-icon' => 'heroicon-o-squares-2x2',
-        'require_auth' => true, // Enable centralized auth
-        'back_to_main_label' => '← Back to Admin',
-        'back_to_main_icon' => 'heroicon-o-arrow-left',
-        'back_to_main_url' => '/admin',
-    ],
-];
-```
+- `module:filament:install` - Set up Filament in a module
+- `module:make:filament-panel` - Create a Filament panel
+- `module:make:filament-resource` - Create a Filament resource
+- `module:make:filament-page` - Create a Filament page
+- `module:make:filament-widget` - Create a Filament widget
+- `module:make:filament-cluster` - Create a Filament cluster
+- `module:make:filament-plugin` - Create a Filament plugin
+- `module:namespace:update` - Update module namespaces
+- `module:assets:discover` - Discover and register assets
+- `module:validate` - Validate external projects
+- `module:migrate` - Migrate external projects
+- `module:health` - Check module health
+- `module:route:helper` - Generate route helpers
 
+See the [Commands Reference](docs/commands/index.md) for complete documentation.
 
-### Protecting your resources, pages and widgets (Access Control) - WIP
+## Documentation
 
-```php
-use Coolsam\Modules\Resource;
-```
+- **[Documentation Index](docs/index.md)** - Start here for all documentation
+- **[Installation](docs/installation.md)** - Installation guide
+- **[Configuration](docs/configuration.md)** - Configuration reference
+- **[Getting Started](docs/guides/getting-started.md)** - Quick start tutorial
+- **[Creating Modules](docs/guides/creating-modules.md)** - Module creation guide
+- **[Panels vs Plugins](docs/guides/panels-vs-plugins.md)** - Decision guide
+- **[Migration Guide](docs/guides/migration-guide.md)** - Migrating projects
+- **[Troubleshooting](docs/guides/troubleshooting.md)** - Common issues
+- **[Commands Reference](docs/commands/index.md)** - All commands
+- **[Advanced Topics](docs/advanced/)** - Customization and extending
 
-use the above resource class instead of `use Filament/Resources/Resource;` into your resource class file to protect your
-resources.
+## What's New in 5.x
 
-```php
-use Coolsam\Modules\Page;
-```
+- 🛡️ **Centralized Authentication**: Module panels now automatically inherit authentication from your main Filament panel
+- 🔄 **Configurable Back Navigation**: Customizable "Back to Admin" buttons in module panels
+- 🏗️ **Independent Module Panels**: Each module can have its own dedicated Filament panel
+- ⚙️ **Enhanced Security**: Automatic middleware injection for authentication enforcement
+- 🎨 **Asset Discovery**: Automatic asset discovery and Vite integration
+- 🔧 **Developer Tools**: Health checks, validation, and migration tools
 
-use the above page class instead of `use Filament/Pages/Page;` into your page class file to protect your pages.
+## Contributing
 
-```php
-use Coolsam\Modules\TableWidget;
-```
-
-use the above page class instead of `use Filament/Pages/TableWidget;` into your widget class file to protect your
-TableWidget.
-
-```php
-use Coolsam\Modules\ChartWidget;
-```
-
-use the above page class instead of `use Filament/Pages/ChartWidget;` into your widget class file to protect your
-ChartWidget.
-
-```php
-use Coolsam\Modules\StatsOverviewWidget;
-```
-
-use the above page class instead of `use Filament/Pages/StatsOverviewWidget;` into your widget class file to protect
-your StatsOverviewWidget.
-
-```php
-use CanAccessTrait;
-```
-
-use the above trait directly into your resource and page class file to protect your resources and pages.
-
-## Fork Installation
-
-These steps outline how to install a forked version of this package.
-
-### 1) Point Composer at the fork
-
-```bash
-composer config repositories.filament-modules vcs http://172.168.4.96/talha/filament-modules.git
-```
-
-### 2) Set secure-http as false
-```bash
-composer config secure-http false
-```
-
-### 3) Require the fork
-
-- Remove the old tag if needed:
-  ```bash
-  composer remove coolsam/modules
-  ```
-- Require the fork (dev branch):
-  ```bash
-  composer require coolsam/modules:*@dev
-  ```
-  - If you use `minimum-stability: stable`, add `"prefer-stable": true` and allow the `@dev` requirement, or tag your fork and require that tag.
-
-### 4) Refresh autoload & caches
-
-```bash
-composer dump-autoload
-php artisan config:clear && php artisan cache:clear
-```
-
-### 5) (Optional) Re-publish config/stubs if you want the latest defaults
-
-```bash
-php artisan vendor:publish --tag=modules-config --force
-php artisan vendor:publish --tag=modules-stubs --force # (only if you rely on published stubs)
-```
-
-### 6) Update each module’s frontend scaffolding (to get Tailwind v4 + Vite stubs)
-
-- For each module:
-  ```bash
-  php artisan module:filament:install <ModuleName> # (add --sass if you prefer Sass)
-  ```
-- Then inside that module:
-  ```bash
-  npm install && npm run build # (or centralize builds via workspaces/root Vite if you don’t want per-module installs).
-  ```
-
-### 7) Verify the new generators
-
-- Panel (auto-registers by default):
-  ```bash
-  php artisan module:make:filament-panel AdminArea <ModuleName>
-  ```
-- Resource (module model):
-  ```bash
-  php artisan module:make:filament-resource Product <ModuleName> --model
-  ```
-- Resource (FQN model):
-  ```bash
-  php artisan module:make:filament-resource "App\\Domain\\Orders\\Order" <ModuleName> --model-fqn
-  ```
-
-**Notes:**
-
-- The fork keeps module-local builds by default (same as the prior plugin). If you prefer a single top-level build, wire module entry points into your root Vite config and drop the per-module `package.json`.
-- If you had `wikimedia/composer-merge-plugin` allowed, the fork no longer needs it—Composer will work without that allow-plugin entry.
+Contributions are welcome! Please see [Contributing Guide](docs/contributing/development.md) for details.
 
 ## Testing
 
 ```bash
 composer test
 ```
+
+## License
+
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+
+## Support
+
+- 📖 [Full Documentation](docs/)
+- 🐛 [Issue Tracker](https://github.com/savannabits/filament-modules/issues)
+- 💬 [Discussions](https://github.com/savannabits/filament-modules/discussions)
+
+---
+
+**This package is a wrapper of [nwidart/laravel-modules](https://docs.laravelmodules.com) to make it work with Laravel Filament.**
