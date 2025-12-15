@@ -1,0 +1,49 @@
+# {{ module_name }}
+
+{{ module_description }}
+
+## Installation
+
+This module is part of a larger Laravel application using the Filament admin panel.
+
+## Features
+
+- {{ panel_name }} admin panel
+- Custom resources and pages
+- Integration with main application
+
+## Requirements
+
+- Laravel {{ laravel_version }}
+- Filament {{ filament_version }}
+- PHP {{ php_version }}
+
+## Usage
+
+Access the {{ panel_name }} panel at `/{{ panel_path }}` after authentication.
+
+## Development
+
+### Assets
+
+Compile assets using Vite:
+
+```bash
+npm run build
+```
+
+### Testing
+
+Run tests with PHPUnit:
+
+```bash
+php artisan test
+```
+
+## Contributing
+
+Please follow the main project's contribution guidelines.
+
+## License
+
+This module is licensed under the same license as the main project.

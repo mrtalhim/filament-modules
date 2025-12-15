@@ -1,0 +1,9 @@
+/vendor/
+/node_modules/
+/public/build/
+/.phpunit.result.cache
+/.php-cs-fixer.cache
+/storage/*.key
+.env
+.env.backup
+.env.production
