@@ -3,13 +3,13 @@
 namespace Coolsam\Modules\Commands;
 
 use Coolsam\Modules\Concerns\GeneratesModularFiles;
+use Coolsam\Modules\Concerns\HandlesNonInteractiveMode;
 use Illuminate\Console\GeneratorCommand;
-
-use function Laravel\Prompts\select;
 
 class ModuleMakeFilamentPluginCommand extends GeneratorCommand
 {
     use GeneratesModularFiles;
+    use HandlesNonInteractiveMode;
 
     protected $name = 'module:make:filament-plugin';
 
@@ -42,16 +42,8 @@ class ModuleMakeFilamentPluginCommand extends GeneratorCommand
 
     public function handle(): ?bool
     {
-        $this->ensureModule();
+        $this->ensureModuleArgument();
 
         return parent::handle();
-    }
-
-    public function ensureModule()
-    {
-        if (! $this->argument('module')) {
-            $module = select('Please select the module to create the plugin in:', \Nwidart\Modules\Facades\Module::allEnabled());
-            $this->input->setArgument('module', $module);
-        }
     }
 }

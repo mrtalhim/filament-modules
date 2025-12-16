@@ -3,6 +3,7 @@
 namespace Coolsam\Modules\Commands;
 
 use Coolsam\Modules\Concerns\GeneratesModularFiles;
+use Coolsam\Modules\Concerns\HandlesNonInteractiveMode;
 use Coolsam\Modules\Enums\ConfigMode;
 use Coolsam\Modules\Facades\FilamentModules;
 use Filament\Commands\MakeResourceCommand;
@@ -18,6 +19,7 @@ use function Laravel\Prompts\select;
 class ModuleMakeFilamentResourceCommand extends MakeResourceCommand
 {
     use GeneratesModularFiles;
+    use HandlesNonInteractiveMode;
 
     protected $name = 'module:make:filament-resource';
 
@@ -74,24 +76,18 @@ class ModuleMakeFilamentResourceCommand extends MakeResourceCommand
         return parent::handle();
     }
 
-    public function ensureModuleArgument(): void
-    {
-        if (! $this->argument('module')) {
-            $module = select('Please select the module to create the resource in:', Module::allEnabled());
-            if (! $module) {
-                $this->error('No module selected. Aborting resource creation.');
-                exit(1);
-            }
-            $this->input->setArgument('module', $module);
-        }
-    }
-
     public function ensureModelNamespace(): string
     {
         $modelNamespaceOption = $this->input->getOption('model-namespace');
         $modelInput = $this->input->getArgument('model') ?? $this->guessModelFromResourceName();
 
         if (! $modelInput) {
+            if ($this->isNonInteractive()) {
+                $this->errorNonInteractive(
+                    'Model argument is required in non-interactive mode.',
+                    'php artisan module:make:filament-resource <module> <name> --model=<ModelName>'
+                );
+            }
             $modelInput = select(
                 'Please select the model within this module for the resource:',
                 $this->possibleFqnModels()
@@ -143,15 +139,26 @@ class ModuleMakeFilamentResourceCommand extends MakeResourceCommand
 
                 return;
             }
-            $options = [
-                $defaultPanel->getId(),
-                ...collect($modulePanels)->map(fn ($panel) => $panel->getId())->values()->all(),
-            ];
-            $panelId = select(
-                label: 'Please select the Filament panel to create the resource in:',
-                options: $options,
-                default: $defaultPanel->getId(),
-            );
+            
+            if ($this->isNonInteractive()) {
+                $panelId = $defaultPanel->getId();
+            } else {
+                $options = [
+                    $defaultPanel->getId(),
+                    ...collect($modulePanels)->map(fn ($panel) => $panel->getId())->values()->all(),
+                ];
+                $panelId = select(
+                    label: 'Please select the Filament panel to create the resource in:',
+                    options: $options,
+                    default: $defaultPanel->getId(),
+                );
+            }
+            
+            if (! $panelId) {
+                $this->error('No panel selected. Aborting resource creation.');
+                exit(1);
+            }
+            
             $this->input->setOption('panel', $panelId);
             $this->panel = filament()->getPanel($panelId, isStrict: false);
             if (! $this->panel) {
@@ -220,10 +227,11 @@ class ModuleMakeFilamentResourceCommand extends MakeResourceCommand
             ];
         }
 
-        if ($this->option('resource-namespace')) {
+        $providedNamespace = $this->option('resource-namespace');
+        if ($providedNamespace && in_array($providedNamespace, $namespaces)) {
             return [
-                (string) $this->option('resource-namespace'),
-                $directories[array_search($this->option('resource-namespace'), $namespaces)],
+                (string) $providedNamespace,
+                $directories[array_search($providedNamespace, $namespaces)],
             ];
         }
 
@@ -232,7 +240,9 @@ class ModuleMakeFilamentResourceCommand extends MakeResourceCommand
             $namespaces,
         );
 
-        $result = [
+        if ($this->isNonInteractive()) {
+            $namespace = Arr::first($namespaces);
+        } else {
             $namespace = search(
                 label: $question,
                 options: function (?string $search) use ($keyedNamespaces): array {
@@ -244,7 +254,11 @@ class ModuleMakeFilamentResourceCommand extends MakeResourceCommand
 
                     return array_filter($keyedNamespaces, fn (string $namespace): bool => str($namespace)->replace(['\\', '/'], '')->contains($search, ignoreCase: true));
                 },
-            ),
+            );
+        }
+
+        $result = [
+            $namespace,
             $directories[array_search($namespace, $namespaces)],
         ];
 

@@ -4,6 +4,7 @@ namespace Coolsam\Modules\Commands;
 
 use Coolsam\Modules\Commands\FileGenerators\ModulePanelProviderClassGenerator;
 use Coolsam\Modules\Concerns\GeneratesModularFiles;
+use Coolsam\Modules\Concerns\HandlesNonInteractiveMode;
 use Filament\Commands\MakePanelCommand;
 use Filament\Support\Commands\Concerns\CanGeneratePanels;
 use Filament\Support\Commands\Concerns\CanManipulateFiles;
@@ -21,6 +22,7 @@ class ModuleMakeFilamentPanelCommand extends MakePanelCommand
     use CanGeneratePanels;
     use CanManipulateFiles;
     use GeneratesModularFiles;
+    use HandlesNonInteractiveMode;
 
     protected $name = 'module:make:filament-panel';
 
@@ -99,6 +101,11 @@ class ModuleMakeFilamentPanelCommand extends MakePanelCommand
     protected function ensureNavigationLabelOption(): void
     {
         if (! $this->option('label')) {
+            if ($this->isNonInteractive()) {
+                $defaultLabel = Str::title($this->argument('id') ?? $this->getModule()->getName() . ' App');
+                $this->input->setOption('label', $defaultLabel);
+                return;
+            }
             $label = text(
                 label: 'What is the navigation label for the panel?',
                 placeholder: Str::title($this->argument('id') ?? $this->getModule()->getName() . ' App'),
@@ -114,18 +121,6 @@ class ModuleMakeFilamentPanelCommand extends MakePanelCommand
         }
     }
 
-    protected function ensureModuleArgument(): void
-    {
-        if (! $this->argument('module')) {
-            $module = select('Please select the module to create the panel in:', Module::allEnabled());
-            if (! $module) {
-                $this->components->error('No module selected. Aborting panel creation.');
-                exit(1);
-            }
-            $this->input->setArgument('module', $module);
-        }
-    }
-
     protected function getRelativeNamespace(): string
     {
         return 'Providers\\Filament';
@@ -138,16 +133,31 @@ class ModuleMakeFilamentPanelCommand extends MakePanelCommand
     {
         $module = $this->getModule();
         $this->components->info("Creating Filament panel in module [{$module->getName()}]...");
-        $id = Str::lcfirst($id ?? text(
-            label: 'What is the panel\'s ID?',
-            placeholder: $placeholderId,
-            required: true,
-            validate: fn (string $value) => match (true) {
-                preg_match('/^[a-zA-Z].*/', $value) !== false => null,
-                default => 'The ID must start with a letter, and not a number or special character.',
-            },
-            hint: 'It must be unique to any others you have, and is used to reference the panel in your code.',
-        ));
+        
+        if (! $id) {
+            if ($this->isNonInteractive()) {
+                $id = $placeholderId ?: 'default';
+                if (empty($id)) {
+                    $this->errorNonInteractive(
+                        'Panel ID is required in non-interactive mode.',
+                        'php artisan module:make:filament-panel <id> <module>'
+                    );
+                }
+            } else {
+                $id = text(
+                    label: 'What is the panel\'s ID?',
+                    placeholder: $placeholderId,
+                    required: true,
+                    validate: fn (string $value) => match (true) {
+                        preg_match('/^[a-zA-Z].*/', $value) !== false => null,
+                        default => 'The ID must start with a letter, and not a number or special character.',
+                    },
+                    hint: 'It must be unique to any others you have, and is used to reference the panel in your code.',
+                );
+            }
+        }
+        
+        $id = Str::lcfirst($id);
         if (empty($id)) {
             $this->components->error('Panel ID cannot be empty. Aborting panel creation.');
             exit(1);

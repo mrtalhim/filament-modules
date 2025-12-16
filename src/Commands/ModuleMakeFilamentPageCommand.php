@@ -3,6 +3,7 @@
 namespace Coolsam\Modules\Commands;
 
 use Coolsam\Modules\Concerns\GeneratesModularFiles;
+use Coolsam\Modules\Concerns\HandlesNonInteractiveMode;
 use Coolsam\Modules\Facades\FilamentModules;
 use Filament\Clusters\Cluster;
 use Filament\Commands\MakePageCommand;
@@ -14,6 +15,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Illuminate\Support\Stringable;
 use Nwidart\Modules\Facades\Module;
+use Symfony\Component\Console\Input\InputOption;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\search;
@@ -22,6 +24,7 @@ use function Laravel\Prompts\select;
 class ModuleMakeFilamentPageCommand extends MakePageCommand
 {
     use GeneratesModularFiles;
+    use HandlesNonInteractiveMode;
 
     protected $name = 'module:make:filament-page';
 
@@ -39,6 +42,30 @@ class ModuleMakeFilamentPageCommand extends MakePageCommand
         return 'Filament\\Pages';
     }
 
+    protected function getOptions(): array
+    {
+        return array_merge(parent::getOptions(), [
+            new InputOption(
+                name: 'cluster',
+                shortcut: null,
+                mode: InputOption::VALUE_OPTIONAL,
+                description: 'The cluster FQN for the page',
+            ),
+            new InputOption(
+                name: 'namespace',
+                shortcut: null,
+                mode: InputOption::VALUE_OPTIONAL,
+                description: 'The namespace for the page',
+            ),
+            new InputOption(
+                name: 'view-namespace',
+                shortcut: null,
+                mode: InputOption::VALUE_OPTIONAL,
+                description: 'The view namespace for the page',
+            ),
+        ]);
+    }
+
     /**
      * @throws NoDefaultPanelSetException
      */
@@ -48,18 +75,6 @@ class ModuleMakeFilamentPageCommand extends MakePageCommand
         $this->ensurePanel();
 
         return parent::handle();
-    }
-
-    public function ensureModuleArgument(): void
-    {
-        if (! $this->argument('module')) {
-            $module = select('Please select the module to create the page in:', Module::allEnabled());
-            if (! $module) {
-                $this->error('No module selected. Aborting page creation.');
-                exit(1);
-            }
-            $this->input->setArgument('module', $module);
-        }
     }
 
     /**
@@ -82,6 +97,12 @@ class ModuleMakeFilamentPageCommand extends MakePageCommand
 
                 return;
             }
+            
+            if ($this->isNonInteractive()) {
+                $this->input->setOption('panel', $defaultPanel->getId());
+                return;
+            }
+            
             $options = collect([
                 $defaultPanel,
                 ...$panels,
@@ -112,23 +133,32 @@ class ModuleMakeFilamentPageCommand extends MakePageCommand
                 question: 'Which cluster is the resource in?',
             );
         } else {
-            $clusters = FilamentModules::getModuleClusters($this->argument('module'));
-            if (empty($clusters)) {
-                $this->clusterFqn = null;
+            $clusterOption = $this->option('cluster');
+            if ($clusterOption) {
+                $this->clusterFqn = $clusterOption;
+            } else {
+                $clusters = FilamentModules::getModuleClusters($this->argument('module'));
+                if (empty($clusters)) {
+                    $this->clusterFqn = null;
 
-                return;
-            }
-            if (confirm('Would you like to create the page in a cluster?', false)) {
-                if (count($clusters) === 1) {
-                    $this->clusterFqn = Arr::first($clusters);
-                    // Show this to the user and ask to continue
-                    confirm("The page will be created in the cluster: {$this->clusterFqn}. Proceed?", true);
-                } else {
-                    $this->clusterFqn = select(
-                        label: 'Please select the cluster to create the page in:',
-                        options: $clusters,
-                        default: $clusters[0],
-                    );
+                    return;
+                }
+                if ($this->isNonInteractive()) {
+                    $this->clusterFqn = null;
+                    return;
+                }
+                if (confirm('Would you like to create the page in a cluster?', false)) {
+                    if (count($clusters) === 1) {
+                        $this->clusterFqn = Arr::first($clusters);
+                        // Show this to the user and ask to continue
+                        confirm("The page will be created in the cluster: {$this->clusterFqn}. Proceed?", true);
+                    } else {
+                        $this->clusterFqn = select(
+                            label: 'Please select the cluster to create the page in:',
+                            options: $clusters,
+                            default: $clusters[0],
+                        );
+                    }
                 }
             }
         }
@@ -190,24 +220,31 @@ class ModuleMakeFilamentPageCommand extends MakePageCommand
             $namespaces,
         );
 
-        $this->pagesNamespace = search(
-            label: 'Which namespace would you like to create this page in?',
-            options: function (?string $search) use ($keyedNamespaces): array {
-                if (blank($search)) {
-                    return $keyedNamespaces;
-                }
+        $providedNamespace = $this->option('namespace');
+        if ($providedNamespace && in_array($providedNamespace, $namespaces)) {
+            $this->pagesNamespace = $providedNamespace;
+        } elseif ($this->isNonInteractive()) {
+            $this->pagesNamespace = Arr::first($namespaces);
+        } else {
+            $this->pagesNamespace = search(
+                label: 'Which namespace would you like to create this page in?',
+                options: function (?string $search) use ($keyedNamespaces): array {
+                    if (blank($search)) {
+                        return $keyedNamespaces;
+                    }
 
-                $search = str($search)->trim()->replace(['\\', '/'], '');
+                    $search = str($search)->trim()->replace(['\\', '/'], '');
 
-                return array_filter(
-                    $keyedNamespaces,
-                    fn (string $namespace): bool => str($namespace)->replace(['\\', '/'], '')->contains(
-                        $search,
-                        ignoreCase: true
-                    )
-                );
-            },
-        );
+                    return array_filter(
+                        $keyedNamespaces,
+                        fn (string $namespace): bool => str($namespace)->replace(['\\', '/'], '')->contains(
+                            $search,
+                            ignoreCase: true
+                        )
+                    );
+                },
+            );
+        }
         $this->pagesDirectory = $directories[array_search($this->pagesNamespace, $namespaces)];
     }
 

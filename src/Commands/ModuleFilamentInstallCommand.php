@@ -2,6 +2,7 @@
 
 namespace Coolsam\Modules\Commands;
 
+use Coolsam\Modules\Concerns\HandlesNonInteractiveMode;
 use Coolsam\Modules\Enums\ConfigMode;
 use Coolsam\Modules\Facades\FilamentModules;
 use Filament\Support\Commands\Concerns\CanManipulateFiles;
@@ -18,6 +19,7 @@ use function Laravel\Prompts\confirm;
 class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contracts\Console\PromptsForMissingInput
 {
     use CanManipulateFiles;
+    use HandlesNonInteractiveMode;
     use PromptsForMissingInput;
 
     /**
@@ -49,7 +51,7 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
     {
         $this->moduleName = $this->argument('module');
         $this->mode = ConfigMode::tryFrom(\Config::get('filament-modules.mode', ConfigMode::BOTH->value));
-        $interactive = $this->input->isInteractive() && ! app()->runningUnitTests();
+        $interactive = ! $this->isNonInteractive() && ! app()->runningUnitTests();
         $this->cluster = $this->option('cluster')
             ? true
             : ($interactive ? confirm('Do you want to organize your code into filament clusters?', true) : false);
@@ -85,7 +87,11 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
             // Create Filament Plugin
             $this->createDefaultFilamentPlugin();
         }
-        $shouldCreateDefaultCluster = $this->cluster && ($interactive ? confirm('Would you like to create a default Cluster for the module?', true) : false);
+        $shouldCreateDefaultCluster = $this->cluster && (
+            $this->option('create-default-cluster')
+            ? true
+            : ($interactive ? confirm('Would you like to create a default Cluster for the module?', true) : false)
+        );
         if ($shouldCreateDefaultCluster) {
             $this->createDefaultFilamentCluster();
         }
@@ -114,6 +120,7 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
         return [
             ['cluster', 'C', InputOption::VALUE_NONE],
             ['sass', null, InputOption::VALUE_NONE],
+            ['create-default-cluster', null, InputOption::VALUE_NONE, 'Create a default cluster for the module'],
         ];
     }
 
@@ -132,6 +139,11 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
         try {
             return Module::findOrFail($this->moduleName);
         } catch (ModuleNotFoundException | \Throwable $exception) {
+            if ($this->isNonInteractive()) {
+                $this->error("Module '{$this->moduleName}' does not exist.");
+                $this->line("Run 'php artisan module:make {$this->moduleName}' to create it first.");
+                exit(1);
+            }
             if (confirm("Module $this->moduleName does not exist. Would you like to generate it?", true)) {
                 $args = ['name' => [$this->moduleName]];
 

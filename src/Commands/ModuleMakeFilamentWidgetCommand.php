@@ -3,6 +3,7 @@
 namespace Coolsam\Modules\Commands;
 
 use Coolsam\Modules\Concerns\GeneratesModularFiles;
+use Coolsam\Modules\Concerns\HandlesNonInteractiveMode;
 use Coolsam\Modules\Facades\FilamentModules;
 use Filament\Panel;
 use Filament\Support\Facades\FilamentCli;
@@ -11,6 +12,7 @@ use Filament\Widgets\Widget;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Nwidart\Modules\Facades\Module;
+use Symfony\Component\Console\Input\InputOption;
 
 use function Laravel\Prompts\search;
 use function Laravel\Prompts\select;
@@ -18,6 +20,7 @@ use function Laravel\Prompts\select;
 class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
 {
     use GeneratesModularFiles;
+    use HandlesNonInteractiveMode;
 
     protected $name = 'module:make:filament-widget';
 
@@ -28,9 +31,27 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
         'module:filament:make-widget',
     ];
 
+    protected function getOptions(): array
+    {
+        return array_merge(parent::getOptions(), [
+            new InputOption(
+                name: 'namespace',
+                shortcut: null,
+                mode: InputOption::VALUE_OPTIONAL,
+                description: 'The namespace for the widget',
+            ),
+            new InputOption(
+                name: 'view-namespace',
+                shortcut: null,
+                mode: InputOption::VALUE_OPTIONAL,
+                description: 'The view namespace for the widget',
+            ),
+        ]);
+    }
+
     public function handle(): int
     {
-        $this->ensureModule();
+        $this->ensureModuleArgument();
         $this->ensurePanel();
 
         return parent::handle();
@@ -39,18 +60,6 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
     protected function getRelativeNamespace(): string
     {
         return 'Filament\\Widgets';
-    }
-
-    public function ensureModule()
-    {
-        if (! $this->argument('module')) {
-            $module = select('Please select the module to create the page in:', Module::allEnabled());
-            if (! $module) {
-                $this->error('No module selected. Aborting page creation.');
-                exit(1);
-            }
-            $this->input->setArgument('module', $module);
-        }
     }
 
     public function ensurePanel(): void
@@ -69,6 +78,12 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
 
                 return;
             }
+            
+            if ($this->isNonInteractive()) {
+                $this->input->setOption('panel', $defaultPanel->getId());
+                return;
+            }
+            
             $options = collect([
                 $defaultPanel,
                 ...$panels,
@@ -142,18 +157,25 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
             $namespaces,
         );
 
-        $this->widgetsNamespace = search(
-            label: 'Which namespace would you like to create this widget in?',
-            options: function (?string $search) use ($keyedNamespaces): array {
-                if (blank($search)) {
-                    return $keyedNamespaces;
-                }
+        $providedNamespace = $this->option('namespace');
+        if ($providedNamespace && in_array($providedNamespace, $namespaces)) {
+            $this->widgetsNamespace = $providedNamespace;
+        } elseif ($this->isNonInteractive()) {
+            $this->widgetsNamespace = Arr::first($namespaces);
+        } else {
+            $this->widgetsNamespace = search(
+                label: 'Which namespace would you like to create this widget in?',
+                options: function (?string $search) use ($keyedNamespaces): array {
+                    if (blank($search)) {
+                        return $keyedNamespaces;
+                    }
 
-                $search = str($search)->trim()->replace(['\\', '/'], '');
+                    $search = str($search)->trim()->replace(['\\', '/'], '');
 
-                return array_filter($keyedNamespaces, fn (string $namespace): bool => str($namespace)->replace(['\\', '/'], '')->contains($search, ignoreCase: true));
-            },
-        );
+                    return array_filter($keyedNamespaces, fn (string $namespace): bool => str($namespace)->replace(['\\', '/'], '')->contains($search, ignoreCase: true));
+                },
+            );
+        }
         $this->widgetsDirectory = $directories[array_search($this->widgetsNamespace, $namespaces)];
     }
 
@@ -211,6 +233,15 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
                 array_keys($locations),
             ),
         ];
+
+        if ($this->isNonInteractive()) {
+            $defaultNamespace = $this->getModule()->appNamespace('Livewire');
+            return [
+                $defaultNamespace,
+                $this->getModule()->appPath('Livewire'),
+                '',
+            ];
+        }
 
         $namespace = select(
             label: $question,

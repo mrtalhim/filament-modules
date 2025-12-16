@@ -2,15 +2,15 @@
 
 namespace Coolsam\Modules\Commands;
 
+use Coolsam\Modules\Concerns\HandlesNonInteractiveMode;
 use Coolsam\Modules\Facades\FilamentModules;
 use Filament\Commands\MakeThemeCommand;
 use Filament\Panel;
 use Nwidart\Modules\Module;
 
-use function Laravel\Prompts\text;
-
 class ModuleMakeFilamentThemeCommand extends MakeThemeCommand
 {
+    use HandlesNonInteractiveMode;
     protected $signature = 'module:make:filament-theme {module?} {--pm=} {--F|force}';
 
     protected $description = 'Create a new Filament theme in a module';
@@ -108,7 +108,20 @@ class ModuleMakeFilamentThemeCommand extends MakeThemeCommand
 
     private function getModule(): Module
     {
-        $moduleName = $this->argument('module') ?? text('In which Module should we create this?', 'e.g Blog', required: true);
+        $moduleName = $this->argument('module');
+        
+        if (! $moduleName) {
+            if ($this->isNonInteractive()) {
+                $this->errorNonInteractive(
+                    'Module argument is required in non-interactive mode.',
+                    'php artisan module:make:filament-theme <module>'
+                );
+            }
+            // In interactive mode, use the trait's prompt
+            $module = $this->promptForModule();
+            $moduleName = $module->getName();
+        }
+        
         $moduleStudlyName = str($moduleName)->studly()->toString();
 
         return FilamentModules::getModule($moduleStudlyName);

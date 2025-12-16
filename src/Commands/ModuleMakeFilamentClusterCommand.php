@@ -3,6 +3,7 @@
 namespace Coolsam\Modules\Commands;
 
 use Coolsam\Modules\Concerns\GeneratesModularFiles;
+use Coolsam\Modules\Concerns\HandlesNonInteractiveMode;
 use Coolsam\Modules\Facades\FilamentModules;
 use Filament\Commands\MakeClusterCommand;
 use Illuminate\Support\Arr;
@@ -14,6 +15,7 @@ use function Laravel\Prompts\select;
 class ModuleMakeFilamentClusterCommand extends MakeClusterCommand
 {
     use GeneratesModularFiles;
+    use HandlesNonInteractiveMode;
 
     protected $name = 'module:make:filament-cluster';
 
@@ -29,6 +31,18 @@ class ModuleMakeFilamentClusterCommand extends MakeClusterCommand
         return 'Filament\\Clusters';
     }
 
+    protected function getOptions(): array
+    {
+        return array_merge(parent::getOptions(), [
+            new \Symfony\Component\Console\Input\InputOption(
+                name: 'namespace',
+                shortcut: null,
+                mode: \Symfony\Component\Console\Input\InputOption::VALUE_OPTIONAL,
+                description: 'The namespace for the cluster',
+            ),
+        ]);
+    }
+
     public function handle(): int
     {
         $this->ensureModuleArgument();
@@ -37,23 +51,17 @@ class ModuleMakeFilamentClusterCommand extends MakeClusterCommand
         return parent::handle();
     }
 
-    public function ensureModuleArgument(): void
-    {
-        if (! $this->argument('module')) {
-            $module = select('Please select the module to create the cluster in:', Module::allEnabled());
-            if (! $module) {
-                $this->error('No module selected. Aborting cluster creation.');
-                exit(1);
-            }
-            $this->input->setArgument('module', $module);
-        }
-    }
-
     public function ensurePanel(): void
     {
         if (! $this->option('panel')) {
             $panels = FilamentModules::getModulePanels($this->argument('module'));
             $defaultPanel = filament()->getDefaultPanel();
+            
+            if ($this->isNonInteractive()) {
+                $this->input->setOption('panel', $defaultPanel->getId());
+                return;
+            }
+            
             $options = collect([
                 $defaultPanel,
                 ...$panels,
@@ -103,18 +111,25 @@ class ModuleMakeFilamentClusterCommand extends MakeClusterCommand
             $namespaces,
         );
 
-        $this->clustersNamespace = search(
-            label: 'Which namespace would you like to create this cluster in?',
-            options: function (?string $search) use ($keyedNamespaces): array {
-                if (blank($search)) {
-                    return $keyedNamespaces;
-                }
+        $providedNamespace = $this->option('namespace');
+        if ($providedNamespace && in_array($providedNamespace, $namespaces)) {
+            $this->clustersNamespace = $providedNamespace;
+        } elseif ($this->isNonInteractive()) {
+            $this->clustersNamespace = Arr::first($namespaces);
+        } else {
+            $this->clustersNamespace = search(
+                label: 'Which namespace would you like to create this cluster in?',
+                options: function (?string $search) use ($keyedNamespaces): array {
+                    if (blank($search)) {
+                        return $keyedNamespaces;
+                    }
 
-                $search = str($search)->trim()->replace(['\\', '/'], '');
+                    $search = str($search)->trim()->replace(['\\', '/'], '');
 
-                return array_filter($keyedNamespaces, fn (string $namespace): bool => str($namespace)->replace(['\\', '/'], '')->contains($search, ignoreCase: true));
-            },
-        );
+                    return array_filter($keyedNamespaces, fn (string $namespace): bool => str($namespace)->replace(['\\', '/'], '')->contains($search, ignoreCase: true));
+                },
+            );
+        }
         $this->clustersDirectory = $directories[array_search($this->clustersNamespace, $namespaces)];
     }
 }
