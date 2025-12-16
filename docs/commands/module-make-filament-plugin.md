@@ -16,7 +16,12 @@ php artisan module:make:filament-plugin {name} {module}
 ## Arguments
 
 - `name` - The name of the plugin (e.g., `BlogPlugin`, `AnalyticsPlugin`)
-- `module` - The name of the module
+- `module` - The name of the module (optional in interactive mode)
+
+## Options
+
+- `--no-interaction`, `-n` - Run in non-interactive mode (requires `module` argument)
+- `--force`, `-F` - Overwrite existing files
 
 ## Description
 
@@ -43,6 +48,16 @@ When run without arguments, the command will prompt you:
 
 - Plugin name
 - Module name
+
+## Non-Interactive Mode
+
+When run with `--no-interaction` or in a CI/CD environment (`CI=true`), the command requires all arguments:
+
+```bash
+php artisan module:make:filament-plugin BlogPlugin Blog --no-interaction
+```
+
+If the `module` argument is missing in non-interactive mode, the command will exit with an error.
 
 ## Generated File
 

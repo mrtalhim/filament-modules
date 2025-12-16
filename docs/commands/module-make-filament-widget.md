@@ -23,6 +23,11 @@ php artisan module:make:filament-widget {name} {module}
 - `--chart` - Create a chart widget
 - `--table` - Create a table widget
 - `--stats-overview` - Create a stats overview widget
+- `--panel` - Specific panel ID (if module has multiple panels)
+- `--namespace` - The namespace for the widget (when multiple namespaces exist)
+- `--view-namespace` - The view namespace for the widget
+- `--no-interaction`, `-n` - Run in non-interactive mode (requires `name` and `module` arguments)
+- `--force`, `-F` - Overwrite existing files
 
 ## Description
 
@@ -54,6 +59,13 @@ php artisan module:make:filament-widget RecentPostsTable Blog --table
 php artisan module:make:filament-widget BlogStats Blog --stats-overview
 ```
 
+### Non-Interactive Mode
+
+```bash
+# Create widget with all options specified
+php artisan module:make:filament-widget RecentPosts Blog --panel=admin --namespace="Modules\Blog\Filament\Widgets" --no-interaction
+```
+
 ## Interactive Mode
 
 When run without arguments, the command will prompt you:
@@ -61,6 +73,18 @@ When run without arguments, the command will prompt you:
 - Widget name
 - Module name
 - Widget type
+- Panel selection (if multiple panels exist)
+- Namespace selection (if multiple namespaces exist)
+- View location
+
+## Non-Interactive Mode
+
+When run with `--no-interaction` or in a CI/CD environment (`CI=true`), the command will:
+
+- Require `name` and `module` arguments
+- Use default panel if `--panel` is not provided
+- Use first available namespace if `--namespace` is not provided
+- Skip all prompts and use provided options or sensible defaults
 
 ## Generated File
 

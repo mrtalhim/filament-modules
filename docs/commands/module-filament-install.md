@@ -14,8 +14,10 @@ php artisan module:filament:install {module}
 
 ## Options
 
-- `--cluster` - Organize code into Filament clusters
+- `--cluster`, `-C` - Organize code into Filament clusters
 - `--sass` - Use Sass instead of Tailwind CSS
+- `--create-default-cluster` - Create a default cluster for the module (only used when `--cluster` is set)
+- `--no-interaction`, `-n` - Run in non-interactive mode (no prompts)
 
 ## Description
 
@@ -48,6 +50,16 @@ php artisan module:filament:install Blog --cluster
 php artisan module:filament:install Blog --sass
 ```
 
+### Non-Interactive Mode
+
+```bash
+# Install with clusters and create default cluster
+php artisan module:filament:install Blog --cluster --create-default-cluster --no-interaction
+
+# Install with Sass in non-interactive mode
+php artisan module:filament:install Blog --sass --no-interaction
+```
+
 ## Interactive Mode
 
 When run interactively, the command will prompt you:
@@ -55,6 +67,15 @@ When run interactively, the command will prompt you:
 - Whether to organize code into clusters
 - Whether to create a default cluster
 - Frontend preset selection (Tailwind or Sass)
+
+## Non-Interactive Mode
+
+When run with `--no-interaction` or in a CI/CD environment (`CI=true`), the command will:
+
+- Use `--cluster` flag value (defaults to `false` if not provided)
+- Use `--create-default-cluster` flag value (defaults to `false` if not provided)
+- Use `--sass` flag value (defaults to Tailwind if not provided)
+- Skip all prompts and use provided options or sensible defaults
 
 ## Generated Structure
 

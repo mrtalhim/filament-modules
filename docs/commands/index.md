@@ -143,6 +143,38 @@ php artisan module:make:filament-resource
 # - Which model should this resource use?
 ```
 
+## Non-Interactive Mode
+
+All commands support non-interactive execution using the `--no-interaction` flag (or `-n`). This is useful for:
+
+- CI/CD pipelines
+- Automated scripts
+- When you want to provide all arguments upfront
+
+Commands automatically detect non-interactive mode when:
+- `--no-interaction` or `-n` flag is used
+- `CI=true` environment variable is set
+- Running in a non-interactive terminal
+
+### Example: Non-Interactive Usage
+
+```bash
+# Install Filament support non-interactively
+php artisan module:filament:install Blog --cluster --create-default-cluster --no-interaction
+
+# Create resource with all options specified
+php artisan module:make:filament-resource Post Blog --model --panel=admin --no-interaction
+
+# Create panel non-interactively
+php artisan module:make:filament-panel admin Blog --label="Admin Panel" --no-interaction
+```
+
+When running in non-interactive mode:
+- All required arguments must be provided
+- Options use sensible defaults when not specified
+- Clear error messages are shown if required arguments are missing
+- No prompts are displayed
+
 ## Getting Help
 
 For detailed information about any command, use the `--help` flag:

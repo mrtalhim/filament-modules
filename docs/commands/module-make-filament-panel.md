@@ -15,13 +15,15 @@ php artisan module:make:filament-panel {id} {module}
 
 ## Arguments
 
-- `id` - The ID of the panel (e.g., `admin`, `member`)
-- `module` - The name of the module
+- `id` - The ID of the panel (e.g., `admin`, `member`) (optional in interactive mode)
+- `module` - The name of the module (optional in interactive mode)
 
 ## Options
 
-- `--label` - Navigation label for the panel
+- `--label` - Navigation label for the panel (auto-generated from panel ID if not provided in non-interactive mode)
 - `--no-auto-register-panel` - Don't auto-register the panel provider
+- `--force`, `-F` - Overwrite existing files
+- `--no-interaction`, `-n` - Run in non-interactive mode (requires `id` and `module` arguments)
 
 ## Description
 
@@ -52,6 +54,33 @@ php artisan module:make:filament-panel member Blog --label="Member Area"
 ```bash
 php artisan module:make:filament-panel admin Blog --no-auto-register-panel
 ```
+
+### Non-Interactive Mode
+
+```bash
+# Create panel with all options specified
+php artisan module:make:filament-panel admin Blog --label="Admin Panel" --no-interaction
+
+# Panel ID and label will be auto-generated if not provided
+php artisan module:make:filament-panel admin Blog --no-interaction
+```
+
+## Interactive Mode
+
+When run without arguments, the command will prompt you:
+
+- Panel ID
+- Module name
+- Navigation label
+
+## Non-Interactive Mode
+
+When run with `--no-interaction` or in a CI/CD environment (`CI=true`), the command will:
+
+- Require `id` and `module` arguments
+- Auto-generate label from panel ID if `--label` is not provided
+- Use default panel ID (`default`) if `id` is not provided
+- Skip all prompts and use provided options or sensible defaults
 
 ## Generated File
 

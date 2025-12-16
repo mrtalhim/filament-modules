@@ -22,6 +22,11 @@ php artisan module:make:filament-page {name} {module}
 
 - `--type` - Page type: `custom`, `settings`, `dashboard`
 - `--panel` - Specific panel ID (if module has multiple panels)
+- `--cluster` - The cluster FQN for the page
+- `--namespace` - The namespace for the page (when multiple namespaces exist)
+- `--view-namespace` - The view namespace for the page
+- `--no-interaction`, `-n` - Run in non-interactive mode (requires `name` and `module` arguments)
+- `--force`, `-F` - Overwrite existing files
 
 ## Description
 
@@ -53,6 +58,16 @@ php artisan module:make:filament-page Reports Blog --type=custom
 php artisan module:make:filament-page Dashboard Blog --panel=admin
 ```
 
+### Non-Interactive Mode
+
+```bash
+# Create page with all options specified
+php artisan module:make:filament-page Dashboard Blog --panel=admin --namespace="Modules\Blog\Filament\Pages" --no-interaction
+
+# With cluster
+php artisan module:make:filament-page Settings Blog --cluster="Modules\Blog\Filament\Clusters\Settings" --no-interaction
+```
+
 ## Interactive Mode
 
 When run without arguments, the command will prompt you:
@@ -61,6 +76,19 @@ When run without arguments, the command will prompt you:
 - Module name
 - Page type
 - Panel selection (if multiple panels exist)
+- Cluster selection (if clusters exist)
+- Namespace selection (if multiple namespaces exist)
+- View location
+
+## Non-Interactive Mode
+
+When run with `--no-interaction` or in a CI/CD environment (`CI=true`), the command will:
+
+- Require `name` and `module` arguments
+- Use default panel if `--panel` is not provided
+- Skip cluster selection if `--cluster` is not provided
+- Use first available namespace if `--namespace` is not provided
+- Skip all prompts and use provided options or sensible defaults
 
 ## Generated File
 
