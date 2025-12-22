@@ -114,7 +114,7 @@ class ModulesServiceProvider extends PackageServiceProvider
             foreach ($panels as $panel) {
                 // Extract module name from panel class namespace
                 $moduleName = str($panel)->after('Modules\\')->before('\\Providers\\Filament')->toString();
-                
+
                 // Skip disabled modules (only check if module system is available)
                 try {
                     $module = ModuleFacade::find($moduleName);
@@ -334,7 +334,7 @@ class ModulesServiceProvider extends PackageServiceProvider
         // #endregion agent log
 
         return collect($panelProviders)
-            ->map(fn ($path) => FilamentModules::convertPathToNamespace($path))
+            ->map(fn($path) => FilamentModules::convertPathToNamespace($path))
             ->unique()
             ->values()
             ->toArray();

@@ -33,20 +33,37 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
 
     protected function getOptions(): array
     {
-        return array_merge(parent::getOptions(), [
-            new InputOption(
+        $parentOptions = parent::getOptions();
+        
+        // Get existing option names to avoid duplicates
+        $existingOptionNames = array_map(
+            fn($option) => $option->getName(),
+            $parentOptions
+        );
+        
+        $newOptions = [];
+        
+        // Only add 'namespace' option if it doesn't already exist in parent
+        if (!in_array('namespace', $existingOptionNames)) {
+            $newOptions[] = new InputOption(
                 name: 'namespace',
                 shortcut: null,
                 mode: InputOption::VALUE_OPTIONAL,
                 description: 'The namespace for the widget',
-            ),
-            new InputOption(
+            );
+        }
+        
+        // Only add 'view-namespace' option if it doesn't already exist in parent
+        if (!in_array('view-namespace', $existingOptionNames)) {
+            $newOptions[] = new InputOption(
                 name: 'view-namespace',
                 shortcut: null,
                 mode: InputOption::VALUE_OPTIONAL,
                 description: 'The view namespace for the widget',
-            ),
-        ]);
+            );
+        }
+        
+        return array_merge($parentOptions, $newOptions);
     }
 
     public function handle(): int

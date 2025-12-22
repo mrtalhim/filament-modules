@@ -44,26 +44,47 @@ class ModuleMakeFilamentPageCommand extends MakePageCommand
 
     protected function getOptions(): array
     {
-        return array_merge(parent::getOptions(), [
-            new InputOption(
+        $parentOptions = parent::getOptions();
+
+        // Get existing option names to avoid duplicates
+        $existingOptionNames = array_map(
+            fn($option) => $option->getName(),
+            $parentOptions
+        );
+
+        $newOptions = [];
+
+        // Only add 'cluster' option if it doesn't already exist in parent
+        if (!in_array('cluster', $existingOptionNames)) {
+            $newOptions[] = new InputOption(
                 name: 'cluster',
                 shortcut: null,
                 mode: InputOption::VALUE_OPTIONAL,
                 description: 'The cluster FQN for the page',
-            ),
-            new InputOption(
+            );
+        }
+
+        // Only add 'namespace' option if it doesn't already exist in parent
+        if (!in_array('namespace', $existingOptionNames)) {
+            $newOptions[] = new InputOption(
                 name: 'namespace',
                 shortcut: null,
                 mode: InputOption::VALUE_OPTIONAL,
                 description: 'The namespace for the page',
-            ),
-            new InputOption(
+            );
+        }
+
+        // Only add 'view-namespace' option if it doesn't already exist in parent
+        if (!in_array('view-namespace', $existingOptionNames)) {
+            $newOptions[] = new InputOption(
                 name: 'view-namespace',
                 shortcut: null,
                 mode: InputOption::VALUE_OPTIONAL,
                 description: 'The view namespace for the page',
-            ),
-        ]);
+            );
+        }
+
+        return array_merge($parentOptions, $newOptions);
     }
 
     /**
@@ -97,12 +118,12 @@ class ModuleMakeFilamentPageCommand extends MakePageCommand
 
                 return;
             }
-            
+
             if ($this->isNonInteractive()) {
                 $this->input->setOption('panel', $defaultPanel->getId());
                 return;
             }
-            
+
             $options = collect([
                 $defaultPanel,
                 ...$panels,
@@ -189,7 +210,7 @@ class ModuleMakeFilamentPageCommand extends MakePageCommand
         }
 
         $panelModules = FilamentModules::getModulePanels($this->argument('module'));
-        if (empty($panelModules) || ! collect($panelModules)->contains(fn (
+        if (empty($panelModules) || ! collect($panelModules)->contains(fn(
             Panel $panel
         ) => $panel->getId() === $this->panel->getId())) {
             $this->pagesNamespace = $this->getModule()->appNamespace('Filament\\Pages');
@@ -237,7 +258,7 @@ class ModuleMakeFilamentPageCommand extends MakePageCommand
 
                     return array_filter(
                         $keyedNamespaces,
-                        fn (string $namespace): bool => str($namespace)->replace(['\\', '/'], '')->contains(
+                        fn(string $namespace): bool => str($namespace)->replace(['\\', '/'], '')->contains(
                             $search,
                             ignoreCase: true
                         )
@@ -256,7 +277,7 @@ class ModuleMakeFilamentPageCommand extends MakePageCommand
             $componentLocations = FilamentCli::getComponentLocations();
             if (FilamentModules::getMode()->shouldRegisterPanels()) {
                 $modelPanels = FilamentModules::getModulePanels($this->argument('module'));
-                $modelPanel = collect($modelPanels)->first(fn (Panel | Cluster $panel) => $panel->getId() === $this->panel->getId());
+                $modelPanel = collect($modelPanels)->first(fn(Panel | Cluster $panel) => $panel->getId() === $this->panel->getId());
             } else {
                 $modelPanel = null;
             }
@@ -264,13 +285,13 @@ class ModuleMakeFilamentPageCommand extends MakePageCommand
             $componentLocations[$pageComponent['namespace']] = $pageComponent;
             $matchingComponentLocationNamespaces = collect($componentLocations)
                 ->keys()
-                ->filter(fn (string $namespace): bool => str($this->fqn)->startsWith($namespace));
+                ->filter(fn(string $namespace): bool => str($this->fqn)->startsWith($namespace));
             // Manually add this module's namespace there
             $v = str($this->fqn)
                 ->whenContains(
                     'Filament\\',
-                    fn (Stringable $fqn) => $fqn->after('Filament\\')->prepend('Filament\\'),
-                    fn (Stringable $fqn) => $fqn->replaceFirst(app()->getNamespace(), ''),
+                    fn(Stringable $fqn) => $fqn->after('Filament\\')->prepend('Filament\\'),
+                    fn(Stringable $fqn) => $fqn->replaceFirst(app()->getNamespace(), ''),
                 )
                 ->replace('\\', '/')
                 ->explode('/')
