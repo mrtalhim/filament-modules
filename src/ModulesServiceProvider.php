@@ -10,6 +10,7 @@ use Filament\Support\Facades\FilamentIcon;
 use Illuminate\Filesystem\Filesystem;
 use Livewire\Features\SupportTesting\Testable;
 use Nwidart\Modules\Module;
+use Nwidart\Modules\Facades\Module as ModuleFacade;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -82,6 +83,12 @@ class ModulesServiceProvider extends PackageServiceProvider
             $module = str($namespace)->before('\Providers\\')->afterLast('\\')->toString();
             $className = str($namespace)->afterLast('\\')->toString();
             if (str($className)->startsWith($module)) {
+                // Skip disabled modules
+                $foundModule = ModuleFacade::find($module);
+                if ($foundModule && ! $foundModule->isEnabled()) {
+                    continue;
+                }
+
                 // register the module service provider
                 if (! class_exists($namespace)) {
                     continue;
@@ -101,6 +108,15 @@ class ModulesServiceProvider extends PackageServiceProvider
             $panels = $this->discoverPanelProviders();
 
             foreach ($panels as $panel) {
+                // Extract module name from panel class namespace
+                $moduleName = str($panel)->after('Modules\\')->before('\\Providers\\Filament')->toString();
+                $module = ModuleFacade::find($moduleName);
+                
+                // Skip disabled modules
+                if ($module && ! $module->isEnabled()) {
+                    continue;
+                }
+
                 if (
                     class_exists($panel)
                     && (! property_exists($panel, 'autoRegister') || (bool) ($panel::$autoRegister ?? true))

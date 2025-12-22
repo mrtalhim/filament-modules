@@ -72,6 +72,11 @@ class ModulesPlugin implements Plugin
                     return null;
                 }
 
+                // Skip disabled modules
+                if (! $module->isEnabled()) {
+                    return null;
+                }
+
                 // Extract panel label from the remaining parts after module name
                 $panelLabelParts = array_slice($parts, count(explode('-', $moduleNameKebab)));
                 $panelLabel = implode('-', $panelLabelParts);
@@ -116,7 +121,17 @@ class ModulesPlugin implements Plugin
         // Normalize paths to use consistent directory separators (fixes Windows mixed-slash issue)
         $pluginPaths = array_map(fn($path) => str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path), $pluginPaths);
 
-        return collect($pluginPaths)->map(fn ($path) => FilamentModules::convertPathToNamespace($path))->toArray();
+        return collect($pluginPaths)
+            ->map(fn ($path) => FilamentModules::convertPathToNamespace($path))
+            ->filter(function ($class) {
+                // Extract module name from plugin class namespace
+                $moduleName = str($class)->after('Modules\\')->before('\\Filament\\')->toString();
+                $module = Module::find($moduleName);
+                
+                // Only include plugins from enabled modules
+                return $module && $module->isEnabled();
+            })
+            ->toArray();
 
     }
 
@@ -143,6 +158,11 @@ class ModulesPlugin implements Plugin
             $moduleName = str($class)->after('Modules\\')->before('\\Providers\\Filament');
             $module = Module::find($moduleName);
             if (! $module) {
+                return null;
+            }
+
+            // Skip disabled modules
+            if (! $module->isEnabled()) {
                 return null;
             }
 
