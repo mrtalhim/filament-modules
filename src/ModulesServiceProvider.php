@@ -83,10 +83,14 @@ class ModulesServiceProvider extends PackageServiceProvider
             $module = str($namespace)->before('\Providers\\')->afterLast('\\')->toString();
             $className = str($namespace)->afterLast('\\')->toString();
             if (str($className)->startsWith($module)) {
-                // Skip disabled modules
-                $foundModule = ModuleFacade::find($module);
-                if ($foundModule && ! $foundModule->isEnabled()) {
-                    continue;
+                // Skip disabled modules (only check if module system is available)
+                try {
+                    $foundModule = ModuleFacade::find($module);
+                    if ($foundModule && ! $foundModule->isEnabled()) {
+                        continue;
+                    }
+                } catch (\Throwable $e) {
+                    // Module system not available yet, continue with registration
                 }
 
                 // register the module service provider
@@ -110,11 +114,15 @@ class ModulesServiceProvider extends PackageServiceProvider
             foreach ($panels as $panel) {
                 // Extract module name from panel class namespace
                 $moduleName = str($panel)->after('Modules\\')->before('\\Providers\\Filament')->toString();
-                $module = ModuleFacade::find($moduleName);
                 
-                // Skip disabled modules
-                if ($module && ! $module->isEnabled()) {
-                    continue;
+                // Skip disabled modules (only check if module system is available)
+                try {
+                    $module = ModuleFacade::find($moduleName);
+                    if ($module && ! $module->isEnabled()) {
+                        continue;
+                    }
+                } catch (\Throwable $e) {
+                    // Module system not available yet, continue with registration
                 }
 
                 if (
@@ -326,7 +334,7 @@ class ModulesServiceProvider extends PackageServiceProvider
         // #endregion agent log
 
         return collect($panelProviders)
-            ->map(fn ($path) => $this->app[Modules::class]->convertPathToNamespace($path))
+            ->map(fn ($path) => FilamentModules::convertPathToNamespace($path))
             ->unique()
             ->values()
             ->toArray();
