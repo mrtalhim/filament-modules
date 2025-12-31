@@ -99,6 +99,8 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
         if (config('filament-modules.module_panel.auto_create_on_install', true)) {
             // Create default Filament Panel
             $this->createDefaultFilamentPanel();
+            // Create default theme files for the panel
+            $this->createDefaultThemeFiles();
         }
 
         // Register module views in service provider
@@ -338,6 +340,32 @@ class ModuleFilamentInstallCommand extends Command implements \Illuminate\Contra
             'id' => config('filament-modules.module_panel.default_id', 'admin'),
             'module' => $module->getStudlyName(),
         ]);
+    }
+
+    protected function createDefaultThemeFiles(): void
+    {
+        $module = $this->getModule();
+        $defaultPanelId = config('filament-modules.module_panel.default_id', 'admin');
+
+        // Create theme files for the default panel
+        $this->call('module:make:filament-theme', [
+            'module' => $module->getStudlyName(),
+        ]);
+
+        // Update the generated theme file with proper panel identifiers
+        $this->updateThemeFileWithPanelId($module, $defaultPanelId);
+    }
+
+    protected function updateThemeFileWithPanelId(\Nwidart\Modules\Module $module, string $panelId): void
+    {
+        $cssFilePath = $module->resourcesPath('css/filament/theme.css');
+
+        if (file_exists($cssFilePath)) {
+            $content = file_get_contents($cssFilePath);
+            $content = str_replace('{{ panel_id }}', $panelId, $content);
+            $content = str_replace('{{ module_name }}', $module->getName(), $content);
+            file_put_contents($cssFilePath, $content);
+        }
     }
 
     protected function registerModuleViews(): void

@@ -1,3 +1,8 @@
 @import '../../../../../vendor/filament/filament/resources/css/theme.css';
 
+/* Module-specific theme styles */
+.fi-theme-identifier[data-module="{{ module_name }}"][data-panel="{{ panel_id }}"] {
+    /* Add module-specific styles here */
+}
+
 @config 'tailwind.config.js';

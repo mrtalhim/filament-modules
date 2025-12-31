@@ -200,6 +200,13 @@ class ModulesServiceProvider extends PackageServiceProvider
             Commands\ModuleMakeFilamentWidgetCommand::class,
             Commands\ModuleMakeFilamentThemeCommand::class,
             Commands\ModuleMakeFilamentPanelCommand::class,
+            Commands\ModuleThemeFixDuplicatesCommand::class,
+            Commands\ModuleValidateCommand::class,
+            Commands\ModuleAssetsDiscoverCommand::class,
+            Commands\ModuleHealthCommand::class,
+            Commands\ModuleMigrateCommand::class,
+            Commands\ModuleNamespaceUpdateCommand::class,
+            Commands\ModuleRouteHelperCommand::class,
         ];
     }
 

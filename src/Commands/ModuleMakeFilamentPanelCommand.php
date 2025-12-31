@@ -318,5 +318,43 @@ class ModuleMakeFilamentPanelCommand extends MakePanelCommand
         // #endregion agent log
 
         $this->components->info("Filament panel [{$path}] created successfully.");
+
+        // Create default theme files for this panel
+        $this->createDefaultThemeFilesForPanel($module, $id);
+    }
+
+    protected function createDefaultThemeFilesForPanel(\Nwidart\Modules\Module $module, string $panelId): void
+    {
+        // Create theme directory for this panel if it doesn't exist
+        $themeDir = $module->resourcesPath('css/filament');
+        if (!is_dir($themeDir)) {
+            mkdir($themeDir, 0755, true);
+        }
+
+        // Create theme file for this specific panel
+        $panelThemeFile = $themeDir . "/theme-{$panelId}.css";
+        if (!file_exists($panelThemeFile)) {
+            $this->createPanelThemeFile($module, $panelId, $panelThemeFile);
+            $this->components->info("Filament theme [resources/css/filament/theme-{$panelId}.css] created successfully.");
+        }
+    }
+
+    protected function createPanelThemeFile(\Nwidart\Modules\Module $module, string $panelId, string $filePath): void
+    {
+        $stubPath = $this->getDefaultStubPath() . '/filament-theme-css.stub';
+        if (!file_exists($stubPath)) {
+            return;
+        }
+
+        $content = file_get_contents($stubPath);
+        $content = str_replace('{{ module_name }}', $module->getName(), $content);
+        $content = str_replace('{{ panel_id }}', $panelId, $content);
+
+        file_put_contents($filePath, $content);
+    }
+
+    protected function getDefaultStubPath(): string
+    {
+        return __DIR__ . '/stubs';
     }
 }

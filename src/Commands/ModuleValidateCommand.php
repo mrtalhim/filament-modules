@@ -68,6 +68,11 @@ class ModuleValidateCommand extends Command
         // 5. Check for shared models
         $this->checkSharedModels($externalPath, $warnings);
 
+        // 6. Check module theme files (if target module specified)
+        if ($targetModule) {
+            $this->checkModuleThemeFiles($targetModule, $issues, $warnings);
+        }
+
         // Report results
         $this->reportResults($issues, $warnings);
 
@@ -247,6 +252,90 @@ class ModuleValidateCommand extends Command
         }
 
         $this->line("   Found " . count($models) . " models");
+    }
+
+    /**
+     * Check module theme files for proper identifiers.
+     */
+    protected function checkModuleThemeFiles(string $moduleName, array &$issues, array &$warnings): void
+    {
+        $this->info("🎨 Checking module theme files...");
+
+        $module = Module::find($moduleName);
+        if (!$module) {
+            $issues[] = "Module '{$moduleName}' not found for theme validation";
+            return;
+        }
+
+        $themeDir = $module->resourcesPath('css/filament');
+        if (!is_dir($themeDir)) {
+            $warnings[] = "No theme directory found at {$themeDir}";
+            return;
+        }
+
+        $themeFiles = glob($themeDir . '/theme*.css');
+        if (empty($themeFiles)) {
+            $warnings[] = "No theme files found in {$themeDir}";
+            return;
+        }
+
+        foreach ($themeFiles as $themeFile) {
+            $this->validateThemeFile($module, $themeFile, $issues, $warnings);
+        }
+
+        $this->line("   Checked " . count($themeFiles) . " theme files");
+    }
+
+    /**
+     * Validate a specific theme file.
+     */
+    protected function validateThemeFile(\Nwidart\Modules\Module $module, string $filePath, array &$issues, array &$warnings): void
+    {
+        $fileName = basename($filePath);
+        $content = file_get_contents($filePath);
+
+        // Check for module identifier
+        $moduleIdentifier = "[data-module=\"{$module->getName()}\"]";
+        if (!str_contains($content, $moduleIdentifier)) {
+            $issues[] = "Theme file '{$fileName}' missing module identifier: {$moduleIdentifier}";
+        }
+
+        // Check for panel identifier
+        if (!preg_match('/\[data-panel="([^"]+)"\]/', $content, $matches)) {
+            $warnings[] = "Theme file '{$fileName}' missing panel identifier";
+        }
+
+        // Check for duplicate selectors that could cause issues
+        $duplicateSelectors = $this->findDuplicateSelectors($content);
+        if (!empty($duplicateSelectors)) {
+            $warnings[] = "Theme file '{$fileName}' contains duplicate selectors: " . implode(', ', $duplicateSelectors);
+        }
+    }
+
+    /**
+     * Find duplicate selectors in theme content.
+     */
+    protected function findDuplicateSelectors(string $content): array
+    {
+        $duplicates = [];
+
+        // Simple check for common selectors that might be duplicated
+        $commonSelectors = [
+            '.fi-body',
+            '.fi-sidebar',
+            '.fi-topbar',
+            '.fi-page',
+        ];
+
+        foreach ($commonSelectors as $selector) {
+            $count = substr_count($content, $selector . ' {');
+            $count += substr_count($content, $selector . '{');
+            if ($count > 1) {
+                $duplicates[] = $selector;
+            }
+        }
+
+        return $duplicates;
     }
 
     /**

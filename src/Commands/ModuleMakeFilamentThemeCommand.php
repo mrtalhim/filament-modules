@@ -60,7 +60,10 @@ class ModuleMakeFilamentThemeCommand extends MakeThemeCommand
 
         $viewPathPrefix = '';
 
-        $this->copyStubToApp('filament-theme-css', $cssFilePath);
+        $this->copyStubToApp('filament-theme-css', $cssFilePath, [
+            'module_name' => $module->getName(),
+            'panel_id' => 'admin', // Default panel ID
+        ]);
         $this->copyStubToApp('filament-theme-tailwind-config', $tailwindConfigFilePath, [
             'classPathPrefix' => $classPathPrefix,
             'viewPathPrefix' => $viewPathPrefix,
