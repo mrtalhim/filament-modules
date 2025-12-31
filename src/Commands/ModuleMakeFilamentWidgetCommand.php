@@ -34,15 +34,15 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
     protected function getOptions(): array
     {
         $parentOptions = parent::getOptions();
-        
+
         // Get existing option names to avoid duplicates
         $existingOptionNames = array_map(
             fn($option) => $option->getName(),
             $parentOptions
         );
-        
+
         $newOptions = [];
-        
+
         // Only add 'namespace' option if it doesn't already exist in parent
         if (!in_array('namespace', $existingOptionNames)) {
             $newOptions[] = new InputOption(
@@ -52,7 +52,7 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
                 description: 'The namespace for the widget',
             );
         }
-        
+
         // Only add 'view-namespace' option if it doesn't already exist in parent
         if (!in_array('view-namespace', $existingOptionNames)) {
             $newOptions[] = new InputOption(
@@ -62,7 +62,7 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
                 description: 'The view namespace for the widget',
             );
         }
-        
+
         return array_merge($parentOptions, $newOptions);
     }
 
@@ -95,12 +95,12 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
 
                 return;
             }
-            
+
             if ($this->isNonInteractive()) {
                 $this->input->setOption('panel', $defaultPanel->getId());
                 return;
             }
-            
+
             $options = collect([
                 $defaultPanel,
                 ...$panels,
@@ -189,7 +189,7 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
 
                     $search = str($search)->trim()->replace(['\\', '/'], '');
 
-                    return array_filter($keyedNamespaces, fn (string $namespace): bool => str($namespace)->replace(['\\', '/'], '')->contains($search, ignoreCase: true));
+                    return array_filter($keyedNamespaces, fn(string $namespace): bool => str($namespace)->replace(['\\', '/'], '')->contains($search, ignoreCase: true));
                 },
             );
         }
@@ -205,7 +205,7 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
 
             $matchingComponentLocationNamespaces = collect($componentLocations)
                 ->keys()
-                ->filter(fn (string $namespace): bool => str($this->fqn)->startsWith($namespace));
+                ->filter(fn(string $namespace): bool => str($this->fqn)->startsWith($namespace));
 
             [
                 $this->view,
@@ -214,8 +214,8 @@ class ModuleMakeFilamentWidgetCommand extends MakeWidgetCommand
                 view: str($this->fqn)
                     ->whenContains(
                         'Filament\\',
-                        fn (Stringable $fqn) => $fqn->after('Filament\\')->prepend('Filament\\'),
-                        fn (Stringable $fqn) => $fqn
+                        fn(Stringable $fqn) => $fqn->after('Filament\\')->prepend('Filament\\'),
+                        fn(Stringable $fqn) => $fqn
                             ->afterLast('\\Livewire\\')
                             ->prepend('Livewire\\'),
                     )
