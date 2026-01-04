@@ -37,8 +37,15 @@ class ModulesPlugin implements Plugin
         if ($mode?->shouldRegisterPanels()) {
             $panels = $this->getModulePanels();
 
+            // Debug: check config and panel count
+            $showInNav = config('filament-modules.panels.show_in_navigation', true);
+            $panelCount = count($panels);
+            $shouldShow = $showInNav && !empty($panels);
+
+            error_log("Filament Modules Debug: show_in_navigation={$showInNav}, panels={$panelCount}, should_show={$shouldShow}");
+
             // Only show the navigation group when the config allows it and there are panels
-            if (config('filament-modules.panels.show_in_navigation', true) && !empty($panels)) {
+            if ($shouldShow) {
                 $group = config('filament-modules.panels.group', 'Modules');
                 $groupIcon = config('filament-modules.panels.group-icon', \Filament\Support\Icons\Heroicon::OutlinedRectangleStack);
                 $groupSort = config('filament-modules.panels.group-sort', 0);

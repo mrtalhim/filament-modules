@@ -18,7 +18,7 @@ return [
         'back_to_main_icon' => 'heroicon-o-arrow-left', // icon for the back to main panel navigation item
         'back_to_main_url' => '/admin', // URL for the back to main panel navigation item
         'require_auth' => true, // whether module panels should enforce authentication (shares main panel auth)
-        'show_in_navigation' => true, // whether to show the Modules navigation group
+        'show_in_navigation' => false, // whether to show the Modules navigation group
     ],
     'module_panel' => [
         'default_id' => 'admin', // the default ID for a module's Filament panel
