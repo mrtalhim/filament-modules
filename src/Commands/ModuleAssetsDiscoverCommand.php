@@ -54,7 +54,7 @@ class ModuleAssetsDiscoverCommand extends Command
 
             // Discover CSS files
             foreach ($cssPaths as $cssPattern) {
-                $cssFiles = glob($module->getPath() . '/' . $cssPattern, GLOB_BRACE);
+                $cssFiles = glob($module->getPath() . '/' . $cssPattern, (\defined('GLOB_BRACE') ? \GLOB_BRACE : 0));
                 foreach ($cssFiles as $cssFile) {
                     if (file_exists($cssFile)) {
                         $relativePath = str_replace(base_path() . '/', '', $cssFile);
@@ -66,7 +66,7 @@ class ModuleAssetsDiscoverCommand extends Command
 
             // Discover JS files
             foreach ($jsPaths as $jsPattern) {
-                $jsFiles = glob($module->getPath() . '/' . $jsPattern, GLOB_BRACE);
+                $jsFiles = glob($module->getPath() . '/' . $jsPattern, (\defined('GLOB_BRACE') ? \GLOB_BRACE : 0));
                 foreach ($jsFiles as $jsFile) {
                     if (file_exists($jsFile)) {
                         $relativePath = str_replace(base_path() . '/', '', $jsFile);

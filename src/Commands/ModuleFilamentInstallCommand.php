@@ -652,7 +652,7 @@ PHP;
         ];
 
         // Add asset discovery if assets exist
-        $hasAssets = ! empty(glob($module->getPath() . '/resources/{css,js}/**/*.{css,js}', GLOB_BRACE));
+        $hasAssets = ! empty(glob($module->getPath() . '/resources/{css,js}/**/*.{css,js}', (\defined('GLOB_BRACE') ? \GLOB_BRACE : 0)));
         if ($hasAssets) {
             array_splice($steps, 3, 0, ["Discover assets: php artisan module:assets:discover"]);
         }
