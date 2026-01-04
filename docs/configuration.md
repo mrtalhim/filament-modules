@@ -238,6 +238,23 @@ The configuration file will be located at `config/filament-modules.php`.
 ],
 ```
 
+### Show in Navigation
+
+**Key**: `panels.show_in_navigation`
+
+**Type**: `boolean`
+
+**Default**: `true`
+
+**Description**: Whether to show the Modules navigation group in the main panel's navigation. When disabled, the navigation group and its items will be hidden, but panel auto-registration remains enabled.
+
+**Example**:
+```php
+'panels' => [
+    'show_in_navigation' => false,
+],
+```
+
 ## Module Panel Configuration
 
 ### Default Panel ID
@@ -502,6 +519,7 @@ return [
         'back_to_main_icon' => 'heroicon-o-arrow-left',
         'back_to_main_url' => '/admin',
         'require_auth' => true,
+        'show_in_navigation' => true,
     ],
 
     'module_panel' => [
@@ -528,6 +546,7 @@ return [
     ],
 ];
 ```
+
 
 
 

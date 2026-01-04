@@ -35,61 +35,65 @@ class ModulesPlugin implements Plugin
         // Register panels
         $mode = ConfigMode::tryFrom(config('filament-modules.mode', ConfigMode::BOTH->value));
         if ($mode?->shouldRegisterPanels()) {
-            $group = config('filament-modules.panels.group', 'Modules');
-            $groupIcon = config('filament-modules.panels.group-icon', \Filament\Support\Icons\Heroicon::OutlinedRectangleStack);
-            $groupSort = config('filament-modules.panels.group-sort', 0);
-            $openInNewTab = config('filament-modules.panels.open-in-new-tab', false);
-
             $panels = $this->getModulePanels();
-            $panel->navigationGroups([
-                NavigationGroup::make($group)
-                    ->icon($groupIcon)
-                    ->collapsed(),
-            ]);
 
-            $navItems = collect($panels)->map(function (Panel $modulePanel) use ($group, $groupSort, $openInNewTab) {
-                // Extract module name from panel ID (format: module-kebab-name-panel-id)
-                // Need to find the correct module name by trying different prefixes
-                $panelId = $modulePanel->getId();
-                $parts = explode('-', $panelId);
-                $module = null;
-                $moduleNameKebab = null;
+            // Only show the navigation group when the config allows it and there are panels
+            if (config('filament-modules.panels.show_in_navigation', true) && !empty($panels)) {
+                $group = config('filament-modules.panels.group', 'Modules');
+                $groupIcon = config('filament-modules.panels.group-icon', \Filament\Support\Icons\Heroicon::OutlinedRectangleStack);
+                $groupSort = config('filament-modules.panels.group-sort', 0);
+                $openInNewTab = config('filament-modules.panels.open-in-new-tab', false);
 
-                // Try all possible module name prefixes (from longest to shortest)
-                for ($i = count($parts) - 1; $i > 0; $i--) {
-                    $possibleModuleNameKebab = implode('-', array_slice($parts, 0, $i));
-                    // Convert kebab-case to StudlyCase for Module::find()
-                    $possibleModuleNameStudly = str($possibleModuleNameKebab)->studly()->toString();
-                    $foundModule = Module::find($possibleModuleNameStudly);
-                    if ($foundModule) {
-                        $module = $foundModule;
-                        $moduleNameKebab = $possibleModuleNameKebab;
-                        break;
+                $panel->navigationGroups([
+                    NavigationGroup::make($group)
+                        ->icon($groupIcon)
+                        ->collapsed(),
+                ]);
+
+                $navItems = collect($panels)->map(function (Panel $modulePanel) use ($group, $groupSort, $openInNewTab) {
+                    // Extract module name from panel ID (format: module-kebab-name-panel-id)
+                    // Need to find the correct module name by trying different prefixes
+                    $panelId = $modulePanel->getId();
+                    $parts = explode('-', $panelId);
+                    $module = null;
+                    $moduleNameKebab = null;
+
+                    // Try all possible module name prefixes (from longest to shortest)
+                    for ($i = count($parts) - 1; $i > 0; $i--) {
+                        $possibleModuleNameKebab = implode('-', array_slice($parts, 0, $i));
+                        // Convert kebab-case to StudlyCase for Module::find()
+                        $possibleModuleNameStudly = str($possibleModuleNameKebab)->studly()->toString();
+                        $foundModule = Module::find($possibleModuleNameStudly);
+                        if ($foundModule) {
+                            $module = $foundModule;
+                            $moduleNameKebab = $possibleModuleNameKebab;
+                            break;
+                        }
                     }
-                }
 
-                if (! $module) {
-                    return null;
-                }
+                    if (! $module) {
+                        return null;
+                    }
 
-                // Skip disabled modules
-                if (! $module->isEnabled()) {
-                    return null;
-                }
+                    // Skip disabled modules
+                    if (! $module->isEnabled()) {
+                        return null;
+                    }
 
-                // Extract panel label from the remaining parts after module name
-                $panelLabelParts = array_slice($parts, count(explode('-', $moduleNameKebab)));
-                $panelLabel = implode('-', $panelLabelParts);
-                $label = $modulePanel->getBrandName() ?? str($panelLabel)->studly()->snake()->replace('_', ' ')->toString();
+                    // Extract panel label from the remaining parts after module name
+                    $panelLabelParts = array_slice($parts, count(explode('-', $moduleNameKebab)));
+                    $panelLabel = implode('-', $panelLabelParts);
+                    $label = $modulePanel->getBrandName() ?? str($panelLabel)->studly()->snake()->replace('_', ' ')->toString();
 
-                return NavigationItem::make($label)
-                    ->group($group)
-                    ->sort($groupSort)
-                    ->url($modulePanel->getUrl())
-                    ->openUrlInNewTab($openInNewTab);
-            })->filter()->toArray();
+                    return NavigationItem::make($label)
+                        ->group($group)
+                        ->sort($groupSort)
+                        ->url($modulePanel->getUrl())
+                        ->openUrlInNewTab($openInNewTab);
+                })->filter()->toArray();
 
-            $panel->navigationItems($navItems);
+                $panel->navigationItems($navItems);
+            }
         }
     }
 
