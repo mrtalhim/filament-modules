@@ -38,11 +38,9 @@ class ModulesPlugin implements Plugin
             $panels = $this->getModulePanels();
 
             // Debug: check config and panel count
-            $showInNav = config('filament-modules.panels.show_in_navigation', true);
+            $showInNav = filter_var(config('filament-modules.panels.show_in_navigation', true), FILTER_VALIDATE_BOOLEAN);
             $panelCount = count($panels);
             $shouldShow = $showInNav && !empty($panels);
-
-            error_log("Filament Modules Debug: show_in_navigation={$showInNav}, panels={$panelCount}, should_show={$shouldShow}");
 
             // Only show the navigation group when the config allows it and there are panels
             if ($shouldShow) {
