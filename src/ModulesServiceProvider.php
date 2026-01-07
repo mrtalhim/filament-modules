@@ -129,21 +129,29 @@ class ModulesServiceProvider extends PackageServiceProvider
                     class_exists($panel)
                     && (! property_exists($panel, 'autoRegister') || (bool) ($panel::$autoRegister ?? true))
                 ) {
-                    $this->app->register($panel);
+                    // Register panel providers with Laravel container
+                    // This allows their register() method to run, which calls Filament::registerPanel()
+                    try {
+                        $this->app->register($panel);
+                    } catch (\Throwable $e) {
+                        // Skip if registration fails (binding resolution error)
+                    }
                 }
             }
         };
 
+        // Try to register panels immediately (for existing panels)
         $registerPanels();
 
-        // Ensure panels are picked up whether or not Filament is already resolved.
-        $this->app->beforeResolving('filament', $registerPanels);
-        $this->app->afterResolving('filament', $registerPanels);
+        // Also set up callback to register panels when PanelRegistry is resolved
+        $this->app->beforeResolving(\Filament\PanelRegistry::class, $registerPanels);
     }
 
     public function packageBooted(): void
     {
         $this->attemptToRegisterModuleProviders();
+        $this->autoDiscoverPanels();
+
         // Asset Registration
         FilamentAsset::register(
             $this->getAssets(),
@@ -316,29 +324,6 @@ class ModulesServiceProvider extends PackageServiceProvider
         $modulesPath = config('modules.paths.modules', 'Modules');
         $glob = rtrim($modulesPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '*' . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Providers' . DIRECTORY_SEPARATOR . 'Filament' . DIRECTORY_SEPARATOR . '*PanelProvider.php';
         $panelProviders = glob($glob) ?: [];
-
-        // #region agent log
-        try {
-            $logPath = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . '.cursor' . DIRECTORY_SEPARATOR . 'debug.log';
-            app(\Illuminate\Filesystem\Filesystem::class)->ensureDirectoryExists(dirname($logPath));
-            $payload = json_encode([
-                'sessionId' => 'debug-session',
-                'runId' => env('FM_DEBUG_RUN', 'run3'),
-                'hypothesisId' => 'H4',
-                'location' => 'ModulesServiceProvider::discoverPanelProviders',
-                'message' => 'panel provider discovery',
-                'data' => [
-                    'glob' => $glob,
-                    'count' => count($panelProviders),
-                    'providers' => array_values($panelProviders),
-                ],
-                'timestamp' => round(microtime(true) * 1000),
-            ]);
-            file_put_contents($logPath, $payload . PHP_EOL, FILE_APPEND);
-        } catch (\Throwable $e) {
-            // swallow
-        }
-        // #endregion agent log
 
         return collect($panelProviders)
             ->map(fn($path) => FilamentModules::convertPathToNamespace($path))
